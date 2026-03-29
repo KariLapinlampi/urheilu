@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kenttätesti 28.03.2026 — Analyysi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a;
+    --text: #e4e4e7; --dim: #9ca3af;
+    --blue: #4472C4; --orange: #ED7D31; --green: #70AD47;
+    --red: #FF6B6B; --yellow: #FFC000; --purple: #9B59B6;
+    --walk-color: #4FC3F7; --run-color: #FF7043;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; padding: 20px;
+    max-width: 1400px; margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.8rem; margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--blue), var(--orange));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--dim); font-size: 0.9rem; margin-bottom: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 1.15rem; margin-bottom: 12px; color: var(--text); }
+  .card h3 { font-size: 1rem; margin: 16px 0 8px; color: var(--dim); }
+  .grid { display: grid; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .metric {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; text-align: center;
+  }
+  .metric .label { font-size: 0.8rem; color: var(--dim); margin-bottom: 4px; }
+  .metric .value { font-size: 1.6rem; font-weight: 700; }
+  .metric .detail { font-size: 0.75rem; color: var(--dim); margin-top: 2px; }
+  .chart-container { position: relative; height: 300px; margin: 10px 0; }
+  .chart-container.tall { height: 380px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+  th { color: var(--dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+  td:first-child, th:first-child { text-align: left; }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .badge-walk { background: var(--walk-color); color: #000; }
+  .badge-run { background: var(--run-color); color: #fff; }
+  .insight {
+    border-left: 3px solid var(--orange); padding: 12px 16px;
+    margin: 12px 0; background: rgba(237,125,49,0.08); border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+  }
+  .insight.green { border-left-color: var(--green); background: rgba(112,173,71,0.08); }
+  .insight.red { border-left-color: var(--red); background: rgba(255,107,107,0.08); }
+  .insight.blue { border-left-color: var(--blue); background: rgba(68,114,196,0.08); }
+  .insight strong { color: var(--text); }
+  .phase-legend {
+    display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 4px;
+    font-size: 0.8rem; color: var(--dim);
+  }
+  .phase-legend span {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .phase-dot {
+    width: 10px; height: 10px; border-radius: 3px; display: inline-block;
+  }
+  .scroll-table { overflow-x: auto; }
+</style>
+</head>
+<body>
+
+<h1>Kävely/hölkkä -kenttätesti</h1>
+<p class="subtitle">Lauantai 28.3.2026 — Oulu, pyörätie — 9,6 km / 77 min — KK55-strategian kalibrointi</p>
+
+<!-- Yleiset metriikat -->
+<div class="grid grid-3">
+  <div class="metric">
+    <div class="label">Matka</div>
+    <div class="value">9,6 <span style="font-size:0.9rem">km</span></div>
+    <div class="detail">Pyörätie, osin hiekoitushiekkaa</div>
+  </div>
+  <div class="metric">
+    <div class="label">Kesto</div>
+    <div class="value">1:17 <span style="font-size:0.9rem">h</span></div>
+    <div class="detail">77 min kokonaisaika</div>
+  </div>
+  <div class="metric">
+    <div class="label">Keskim. syke</div>
+    <div class="value" style="color:var(--blue)">118 <span style="font-size:0.9rem">bpm</span></div>
+    <div class="detail">Max 148 bpm</div>
+  </div>
+  <div class="metric">
+    <div class="label">Keskim. teho</div>
+    <div class="value" style="color:var(--orange)">203 <span style="font-size:0.9rem">W</span></div>
+    <div class="detail">Norm. teho 235 W</div>
+  </div>
+  <div class="metric">
+    <div class="label">Stamina lopussa</div>
+    <div class="value" style="color:var(--green)">68 <span style="font-size:0.9rem">%</span></div>
+    <div class="detail">100% &rarr; 68% (kulutus 32%)</div>
+  </div>
+  <div class="metric">
+    <div class="label">VO2max</div>
+    <div class="value" style="color:var(--green)">47.0 <span style="font-size:0.9rem">&uarr;</span></div>
+    <div class="detail">Edellinen 46.3 (9.3.)</div>
+  </div>
+</div>
+
+<!-- Stamina-analyysi -->
+<div class="card">
+  <h2>Stamina-analyysi</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Staminan käyttäytyminen harjoituksen eri vaiheissa. KK55:ssä stamina > 50 % puolivälissä (27,5 km) on kriittinen raja.
+  </p>
+  <div class="chart-container tall">
+    <canvas id="staminaChart"></canvas>
+  </div>
+  <div class="phase-legend">
+    <span><span class="phase-dot" style="background:rgba(100,180,100,0.4)"></span> Lämmittely</span>
+    <span><span class="phase-dot" style="background:rgba(68,114,196,0.4)"></span> 30 min sykeohjattu</span>
+    <span><span class="phase-dot" style="background:rgba(237,125,49,0.4)"></span> 5&times; kävely/hölkkä</span>
+    <span><span class="phase-dot" style="background:rgba(100,180,100,0.4)"></span> Jäähdyttely</span>
+  </div>
+
+  <h3>Staminan kulutus vaiheittain</h3>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Vaihe</th><th>Kesto</th><th>Stamina alussa</th><th>Stamina lopussa</th><th>Kulutus</th><th>Kulutus/min</th></tr>
+    <tr><td>Lämmittely (kävely)</td><td>10 min</td><td>100 %</td><td>97 %</td><td>3 %</td><td>0.30 %/min</td></tr>
+    <tr><td>Sykeohjattu hölkkä (HR 110–130)</td><td>30 min</td><td>97 %</td><td>83 %</td><td>14 %</td><td>0.47 %/min</td></tr>
+    <tr><td>5&times; kävely/hölkkä -intervalli</td><td>25 min</td><td>83 %</td><td>71 %</td><td>12 %</td><td>0.48 %/min</td></tr>
+    <tr><td>Jäähdyttely (kävely)</td><td>12 min</td><td>71 %</td><td>68 %</td><td>3 %</td><td>0.25 %/min</td></tr>
+    <tr style="font-weight:700"><td>Yhteensä</td><td>77 min</td><td>100 %</td><td>68 %</td><td>32 %</td><td>0.42 %/min</td></tr>
+  </table>
+  </div>
+
+  <div class="insight green">
+    <strong>KK55-ennuste staminan perusteella:</strong> Sykeohjattu hölkkä (HR 120–125) kuluttaa staminaa ~0,47 %/min.
+    KK55:n kesto ~10 h = 600 min. Jos koko matka olisi tätä tahtia: 600 &times; 0,47 = 282 % &mdash; liikaa.
+    Mutta <strong>kävely/hölkkä-vuorottelu</strong> laskee kulutuksen ~0,35 %/min tasolle (kävely 0,25 + hölkkä 0,47 keskiarvona).
+    600 &times; 0,35 = 210 % &rarr; <strong>Stamina riittää</strong> maltillisella strategialla, mutta
+    viimeiset 7 km (Konttainen&ndash;Valtavaara) on käytävä kävellen (0,25 %/min), jotta staminaa ei ajeta nollaan.
+  </div>
+
+  <div class="insight red">
+    <strong>Kriittinen huomio:</strong> 30 min tasainen hölkkä kulutti 14 % staminaa &mdash; ei kovin paljon lyhyellä matkalla,
+    mutta KK55:ssä tuo tahti 5+ tunnin ajan veisi staminan nollaan km 40 tienoilla, eli <strong>juuri ennen raskaimpia nousuja</strong>.
+    Säännöllinen kävely on välttämätön &mdash; ei valinnainen.
+  </div>
+</div>
+
+<!-- Syke ja teho -aikasarjat -->
+<div class="card">
+  <h2>Syke, teho ja nopeus aikasarjana</h2>
+  <div class="chart-container tall">
+    <canvas id="timelineChart"></canvas>
+  </div>
+  <div class="phase-legend">
+    <span><span class="phase-dot" style="background:var(--red)"></span> Syke (bpm)</span>
+    <span><span class="phase-dot" style="background:var(--orange)"></span> Teho (W)</span>
+    <span><span class="phase-dot" style="background:var(--blue)"></span> Nopeus (m/s)</span>
+  </div>
+
+  <div class="insight blue">
+    <strong>HR 130 bpm -katto näkyy selvästi:</strong> Intervalliosioissa syke nousee nopeasti ~130 bpm tasolle
+    ja laskee yhtä nopeasti kävelyvaiheisiin. Tämä vahvistaa, että 130 bpm on kestävyyskatto &mdash;
+    sen yläpuolella aerobinen järjestelmä on jo venytettynä.
+  </div>
+</div>
+
+<!-- Scatter: HR vs nopeus -->
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Syke vs. nopeus</h2>
+    <p style="color:var(--dim);font-size:0.82rem;margin-bottom:8px">
+      Erottelu: kävely (&#8804; 7,2 km/h) vs. juoksu/hölkkä (> 7,2 km/h)
+    </p>
+    <div class="chart-container tall">
+      <canvas id="scatterHrSpeed"></canvas>
+    </div>
+    <div class="insight">
+      <strong>Kaksi erillistä klusteria:</strong> Kävely (HR 90–125, 4–7 km/h) ja hölkkä/juoksu (HR 110–148, 7–12 km/h).
+      Niiden välissä on selkeä aukko &mdash; <strong>"kuollut alue"</strong>, jossa ei ole datapisteitä.
+      Tämä todistaa, ettei kävelyn ja juoksun välillä ole tasaista siirtymää.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Teho vs. nopeus</h2>
+    <p style="color:var(--dim);font-size:0.82rem;margin-bottom:8px">
+      Teho-nopeus -suhde eri liiketiloissa
+    </p>
+    <div class="chart-container tall">
+      <canvas id="scatterPowerSpeed"></canvas>
+    </div>
+    <div class="insight">
+      <strong>Tehokkuusero:</strong> Juoksun teho-nopeus -suhde on jyrkempi kuin kävelyn. Samalla teholla (esim. 200 W)
+      juoksu tuottaa ~8 km/h mutta kävely vain ~6 km/h. <strong>Hölkkä on tehokkaampi</strong> liikemuoto, mutta
+      se kuluttaa staminaa nopeammin. KK55:n optimaalinen strategia on käyttää hölkkää tasaisilla ja laskuissa,
+      kävelyä nousuissa.
+    </div>
+  </div>
+</div>
+
+<!-- Scatter: Teho vs syke -->
+<div class="card">
+  <h2>Teho vs. syke — aerobinen tehokkuus</h2>
+  <p style="color:var(--dim);font-size:0.82rem;margin-bottom:8px">
+    Kuinka paljon tehoa keho tuottaa kullakin syketasolla
+  </p>
+  <div class="chart-container tall">
+    <canvas id="scatterPowerHr"></canvas>
+  </div>
+  <div class="insight green">
+    <strong>Kestävä alue:</strong> HR 110–125 tuottaa juoksutehoa 200–280 W. HR 125–140 -alueella teho nousee 280–350 W,
+    mutta <strong>sykekustannus kasvaa nopeammin</strong> kuin tehohyöty.
+    KK55-hölkän "sweet spot" on HR 120–125 / ~220 W &mdash; paras teho/rasitus -suhde.
+  </div>
+</div>
+
+<!-- Lapi-analyysi -->
+<div class="card">
+  <h2>Harjoitusosiot (lapit)</h2>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Osio</th><th>Tyyppi</th><th>Matka</th><th>Kesto</th><th>Tahti</th><th>Keskim. HR</th><th>Max HR</th><th>Teho</th></tr>
+    <tr style="background:rgba(100,180,100,0.08)"><td>Lap 1</td><td><span class="badge badge-walk">LÄMMITTELY</span></td><td>1,00 km</td><td>9:30</td><td>9:30/km</td><td>103</td><td>123</td><td>151 W</td></tr>
+    <tr style="background:rgba(68,114,196,0.08)"><td>Lap 3</td><td><span class="badge badge-run">HÖLKKÄ</span></td><td>1,00 km</td><td>7:20</td><td>7:20/km</td><td>121</td><td>138</td><td>229 W</td></tr>
+    <tr style="background:rgba(68,114,196,0.08)"><td>Lap 4</td><td><span class="badge badge-run">HÖLKKÄ</span></td><td>1,00 km</td><td>7:53</td><td>7:53/km</td><td>122</td><td>138</td><td>207 W</td></tr>
+    <tr style="background:rgba(68,114,196,0.08)"><td>Lap 5</td><td><span class="badge badge-run">HÖLKKÄ</span></td><td>1,00 km</td><td>7:18</td><td>7:18/km</td><td>123</td><td>133</td><td>225 W</td></tr>
+    <tr style="background:rgba(68,114,196,0.08)"><td>Lap 6</td><td><span class="badge badge-run">HÖLKKÄ</span></td><td>1,00 km</td><td>7:29</td><td>7:29/km</td><td>123</td><td>133</td><td>220 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 7</td><td><span class="badge badge-walk">KÄVELY 1</span></td><td>324 m</td><td>3:00</td><td>9:16/km</td><td>118</td><td>126</td><td>172 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 8</td><td><span class="badge badge-run">HÖLKKÄ 1</span></td><td>339 m</td><td>2:00</td><td>5:54/km</td><td>129</td><td>141</td><td>289 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 9</td><td><span class="badge badge-walk">KÄVELY 2</span></td><td>328 m</td><td>3:00</td><td>9:09/km</td><td>123</td><td>143</td><td>184 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 10</td><td><span class="badge badge-run">HÖLKKÄ 2</span></td><td>361 m</td><td>2:00</td><td>5:32/km</td><td>137</td><td>148</td><td>309 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 11</td><td><span class="badge badge-walk">KÄVELY 3</span></td><td>326 m</td><td>3:00</td><td>9:12/km</td><td>123</td><td>147</td><td>189 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 12</td><td><span class="badge badge-run">HÖLKKÄ 3</span></td><td>360 m</td><td>2:00</td><td>5:33/km</td><td>134</td><td>145</td><td>305 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 13</td><td><span class="badge badge-walk">KÄVELY 4</span></td><td>318 m</td><td>3:00</td><td>9:26/km</td><td>122</td><td>145</td><td>190 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 14</td><td><span class="badge badge-run">HÖLKKÄ 4</span></td><td>346 m</td><td>2:00</td><td>5:47/km</td><td>132</td><td>141</td><td>314 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 15</td><td><span class="badge badge-walk">KÄVELY 5</span></td><td>313 m</td><td>3:00</td><td>9:35/km</td><td>117</td><td>137</td><td>179 W</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td>Lap 16</td><td><span class="badge badge-run">HÖLKKÄ 5</span></td><td>336 m</td><td>2:00</td><td>5:57/km</td><td>131</td><td>138</td><td>328 W</td></tr>
+    <tr style="background:rgba(100,180,100,0.08)"><td>Lap 17–19</td><td><span class="badge badge-walk">JÄÄHDYTTELY</span></td><td>1,17 km</td><td>11:56</td><td>10:13/km</td><td>108</td><td>138</td><td>151 W</td></tr>
+  </table>
+  </div>
+</div>
+
+<!-- Porrastestin kehitys -->
+<div class="card">
+  <h2>Porrastestin kehitys: oppimiskäyrä</h2>
+  <p style="color:var(--dim);font-size:0.82rem;margin-bottom:8px">
+    5 kävely/hölkkä-paria — Kari kertoo hidastaneensa juoksua ja kiihdyttäneensä kävelyä loppua kohti
+  </p>
+  <div class="chart-container">
+    <canvas id="stepsChart"></canvas>
+  </div>
+
+  <div class="insight">
+    <strong>Oppimisefekti näkyy datassa:</strong> Pari 1 = liian kovaa (289 W / HR 129 &rarr; nopea sykkeen nousu).
+    Pari 2 = kovin hölkkä (309 W / HR 137 = ylivauhtia KK55:lle). Parit 3–5: teho nousee (305&rarr;328 W)
+    mutta <strong>syke laskee</strong> (134&rarr;131) &mdash; keho lämmennyt, lyhyet vedot eivät nosta sykettä.
+    <strong>Tämä ei tarkoita, että 328 W olisi kestävää</strong> &mdash; 2 min veto on liian lyhyt sykkeen tasapainottumiseen.
+  </div>
+</div>
+
+<!-- KK55-johtopäätökset -->
+<div class="card">
+  <h2>Johtopäätökset — KK55 Karhunkierros 55 km</h2>
+
+  <div class="insight green">
+    <strong>&#10004; Kestävän hölkän sykeraja vahvistettu: ~130 bpm.</strong><br>
+    Kolme testiä (tiedonkeruu 26.3., kenttätesti 28.3., aiempi kilpailudata) osoittavat yhtenäisesti:
+    HR 120–125 on kestävä hölkkätaso, HR 130+ on tempoa joka ei kestä ultramatkalla.
+  </div>
+
+  <div class="insight green">
+    <strong>&#10004; Kävely/hölkkä-vuorottelu toimii.</strong><br>
+    Stamina-kulutus intervalleissa (0,48 %/min) on lähes sama kuin tasaisessa hölkässä (0,47 %/min),
+    mutta kävelyjaksojen aikainen palautuminen (0,25 %/min) tuo keskikulutuksen alemmas.
+    Tämä strategia säästää glykogeeniä ja jalkojen lihaksia.
+  </div>
+
+  <div class="insight blue">
+    <strong>&#9998; Hölkän "sweet spot" kalibroitu:</strong><br>
+    Tasaisella: ~220 W, ~7:30/km, HR ~122. Polulla tämä on todennäköisesti ~8:00–8:30/km
+    (maasto lisää vastusta). Mutta <strong>älä seuraa tahtia &mdash; seuraa sykettä</strong>.
+  </div>
+
+  <div class="insight">
+    <strong>&#9888; Kävelyvauhti:</strong><br>
+    Normaali kävely (~150 W, ~10:00/km) on tehokkaampaa kuin ripeä kävely (~180 W, ~9:30/km),
+    joka rasittaa jalkoja luonnottomasti. <strong>Kävele omaa luontevaa vauhtia.</strong>
+  </div>
+
+  <div class="insight red">
+    <strong>&#9888; Sykevaste on nopea:</strong><br>
+    Syke nousi hölkkäjaksoissa nopeasti (~15 s) ja laski nopeasti takaisin. Tämä tarkoittaa,
+    että KK55:ssä <strong>lyhyetkin nousut voivat nostaa sykkeen yli 130</strong> &mdash;
+    vaihda kävelyyn heti kun nousu alkaa, älä odota sykkeen nousua.
+  </div>
+
+  <h3 style="margin-top:20px">Päivitetty strategia</h3>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Tilanne</th><th>Toiminta</th><th>Tavoitesyke</th><th>Teho</th></tr>
+    <tr><td>Nousu (mikä tahansa)</td><td>Kävele normaalisti</td><td>&lt; 120 bpm</td><td>~150 W</td></tr>
+    <tr><td>Tasainen / lasku</td><td>Kevyt hölkkä</td><td>120–125 bpm</td><td>~220 W</td></tr>
+    <tr><td>Syke nousee &gt; 128</td><td>Vaihda kävelyyn</td><td>&mdash;</td><td>&mdash;</td></tr>
+    <tr><td>Syke &gt; 130 bpm</td><td>EHDOTON: kävele</td><td>&mdash;</td><td>&mdash;</td></tr>
+    <tr><td>Stamina &lt; 50 % puolivälissä</td><td>Pelkkää kävelyä</td><td>&lt; 115 bpm</td><td>~150 W</td></tr>
+    <tr><td>Km 48–55 (viim. nousut)</td><td>Kävele — aina</td><td>&lt; 120 bpm</td><td>~140 W</td></tr>
+  </table>
+  </div>
+</div>
+
+<p style="color:var(--dim);font-size:0.8rem;text-align:center;margin-top:30px">
+  Analyysi: Claude &times; Karin harjoitusjärjestelmä — 28.3.2026 — Data: Garmin Forerunner 265
+</p>
+
+<script>
+const D = {"timeline": [{"t": 0, "d": 0, "hr": 79.0, "p": 0, "s": 0, "st": 100.0, "stp": 100.0, "e": 24.6, "c": 0}, {"t": 9.0, "d": 0, "hr": 82.0, "p": 0, "s": 0, "st": 100.0, "stp": 100.0, "e": 24.4, "c": 0}, {"t": 18.0, "d": 18.5, "hr": 82.0, "p": 0, "s": 2.202, "st": 100.0, "stp": 100.0, "e": 23.4, "c": 0}, {"t": 24.0, "d": 21.9, "hr": 85.0, "p": 144.0, "s": 2.223, "st": 99.0, "stp": 99.0, "e": 23.2, "c": 56.0}, {"t": 36.0, "d": 53.2, "hr": 93.0, "p": 163.0, "s": 2.185, "st": 99.0, "stp": 99.0, "e": 23.6, "c": 57.0}, {"t": 48.0, "d": 69.9, "hr": 96.0, "p": 131.0, "s": 1.878, "st": 99.0, "stp": 99.0, "e": 23.4, "c": 59.0}, {"t": 60.0, "d": 90.4, "hr": 96.0, "p": 133.0, "s": 1.698, "st": 99.0, "stp": 99.0, "e": 23.2, "c": 60.0}, {"t": 72.0, "d": 109.9, "hr": 98.0, "p": 121.0, "s": 1.652, "st": 99.0, "stp": 99.0, "e": 23.2, "c": 59.0}, {"t": 84.0, "d": 129.3, "hr": 99.0, "p": 120.0, "s": 1.624, "st": 99.0, "stp": 99.0, "e": 23.0, "c": 59.0}, {"t": 96.0, "d": 149.7, "hr": 99.0, "p": 118.0, "s": 1.642, "st": 99.0, "stp": 99.0, "e": 23.0, "c": 59.0}, {"t": 108.0, "d": 170.1, "hr": 86.0, "p": 123.0, "s": 1.586, "st": 99.0, "stp": 99.0, "e": 22.8, "c": 59.0}, {"t": 120.0, "d": 191.7, "hr": 84.0, "p": 142.0, "s": 1.67, "st": 99.0, "stp": 99.0, "e": 22.4, "c": 62.0}, {"t": 132.0, "d": 213.4, "hr": 96.0, "p": 152.0, "s": 1.717, "st": 99.0, "stp": 99.0, "e": 22.2, "c": 65.0}, {"t": 144.0, "d": 239.5, "hr": 101.0, "p": 220.0, "s": 2.053, "st": 99.0, "stp": 99.0, "e": 22.2, "c": 78.0}, {"t": 156.0, "d": 268.1, "hr": 107.0, "p": 238.0, "s": 2.202, "st": 99.0, "stp": 99.0, "e": 22.2, "c": 78.0}, {"t": 168.0, "d": 293.3, "hr": 113.0, "p": 248.0, "s": 2.146, "st": 99.0, "stp": 99.0, "e": 22.6, "c": 78.0}, {"t": 180.0, "d": 320.2, "hr": 120.0, "p": 256.0, "s": 2.258, "st": 99.0, "stp": 99.0, "e": 22.6, "c": 79.0}, {"t": 192.0, "d": 348.7, "hr": 122.0, "p": 253.0, "s": 2.37, "st": 99.0, "stp": 99.0, "e": 22.0, "c": 79.0}, {"t": 204.0, "d": 374.5, "hr": 122.0, "p": 232.0, "s": 2.295, "st": 99.0, "stp": 99.0, "e": 21.2, "c": 78.0}, {"t": 216.0, "d": 395.9, "hr": 122.0, "p": 207.0, "s": 2.277, "st": 99.0, "stp": 99.0, "e": 21.2, "c": 65.0}, {"t": 228.0, "d": 415.6, "hr": 121.0, "p": 137.0, "s": 1.82, "st": 99.0, "stp": 99.0, "e": 21.0, "c": 60.0}, {"t": 240.0, "d": 436.0, "hr": 117.0, "p": 140.0, "s": 1.792, "st": 99.0, "stp": 99.0, "e": 21.2, "c": 61.0}, {"t": 252.0, "d": 455.0, "hr": 108.0, "p": 136.0, "s": 1.68, "st": 99.0, "stp": 99.0, "e": 21.2, "c": 59.0}, {"t": 264.0, "d": 478.4, "hr": 107.0, "p": 144.0, "s": 1.745, "st": 99.0, "stp": 99.0, "e": 21.2, "c": 60.0}, {"t": 276.0, "d": 499.7, "hr": 108.0, "p": 139.0, "s": 1.791, "st": 99.0, "stp": 99.0, "e": 21.0, "c": 59.0}, {"t": 288.0, "d": 519.2, "hr": 102.0, "p": 135.0, "s": 1.754, "st": 99.0, "stp": 99.0, "e": 21.0, "c": 59.0}, {"t": 300.0, "d": 538.5, "hr": 101.0, "p": 130.0, "s": 1.717, "st": 98.0, "stp": 98.0, "e": 20.8, "c": 58.0}, {"t": 312.0, "d": 559.9, "hr": 98.0, "p": 135.0, "s": 1.698, "st": 98.0, "stp": 98.0, "e": 20.6, "c": 59.0}, {"t": 324.0, "d": 580.6, "hr": 100.0, "p": 140.0, "s": 1.726, "st": 98.0, "stp": 98.0, "e": 20.6, "c": 59.0}, {"t": 336.0, "d": 599.9, "hr": 102.0, "p": 140.0, "s": 1.689, "st": 98.0, "stp": 98.0, "e": 20.8, "c": 60.0}, {"t": 348.0, "d": 621.1, "hr": 101.0, "p": 139.0, "s": 1.689, "st": 98.0, "stp": 98.0, "e": 21.2, "c": 59.0}, {"t": 360.0, "d": 641.5, "hr": 101.0, "p": 149.0, "s": 1.698, "st": 98.0, "stp": 98.0, "e": 21.2, "c": 60.0}, {"t": 372.0, "d": 661.1, "hr": 101.0, "p": 157.0, "s": 1.689, "st": 98.0, "stp": 98.0, "e": 20.4, "c": 62.0}, {"t": 384.0, "d": 682.7, "hr": 98.0, "p": 121.0, "s": 1.708, "st": 98.0, "stp": 98.0, "e": 19.2, "c": 59.0}, {"t": 396.0, "d": 703.0, "hr": 95.0, "p": 136.0, "s": 1.708, "st": 98.0, "stp": 98.0, "e": 18.0, "c": 62.0}, {"t": 408.0, "d": 721.1, "hr": 93.0, "p": 130.0, "s": 1.691, "st": 98.0, "stp": 98.0, "e": 17.8, "c": 60.0}, {"t": 420.0, "d": 744.9, "hr": 93.0, "p": 131.0, "s": 1.728, "st": 98.0, "stp": 98.0, "e": 17.8, "c": 61.0}, {"t": 432.0, "d": 765.5, "hr": 97.0, "p": 156.0, "s": 1.682, "st": 98.0, "stp": 98.0, "e": 19.0, "c": 61.0}, {"t": 444.0, "d": 786.0, "hr": 101.0, "p": 202.0, "s": 1.689, "st": 98.0, "stp": 98.0, "e": 19.8, "c": 60.0}, {"t": 456.0, "d": 806.2, "hr": 109.0, "p": 204.0, "s": 1.652, "st": 98.0, "stp": 98.0, "e": 21.0, "c": 60.0}, {"t": 468.0, "d": 826.1, "hr": 112.0, "p": 156.0, "s": 1.653, "st": 98.0, "stp": 98.0, "e": 21.2, "c": 60.0}, {"t": 480.0, "d": 846.2, "hr": 112.0, "p": 139.0, "s": 1.653, "st": 98.0, "stp": 98.0, "e": 21.2, "c": 60.0}, {"t": 492.0, "d": 865.6, "hr": 111.0, "p": 155.0, "s": 1.653, "st": 98.0, "stp": 98.0, "e": 21.4, "c": 62.0}, {"t": 504.0, "d": 887.8, "hr": 109.0, "p": 137.0, "s": 1.689, "st": 98.0, "stp": 98.0, "e": 21.0, "c": 61.0}, {"t": 516.0, "d": 909.3, "hr": 107.0, "p": 140.0, "s": 1.717, "st": 98.0, "stp": 98.0, "e": 21.0, "c": 61.0}, {"t": 528.0, "d": 930.0, "hr": 105.0, "p": 136.0, "s": 1.726, "st": 98.0, "stp": 98.0, "e": 20.4, "c": 60.0}, {"t": 540.0, "d": 950.4, "hr": 102.0, "p": 138.0, "s": 1.726, "st": 97.0, "stp": 97.0, "e": 20.4, "c": 61.0}, {"t": 552.0, "d": 970.7, "hr": 103.0, "p": 138.0, "s": 1.717, "st": 97.0, "stp": 97.0, "e": 20.2, "c": 60.0}, {"t": 564.0, "d": 992.6, "hr": 99.0, "p": 140.0, "s": 1.736, "st": 97.0, "stp": 97.0, "e": 20.0, "c": 59.0}, {"t": 576.0, "d": 1013.1, "hr": 99.0, "p": 149.0, "s": 1.736, "st": 97.0, "stp": 97.0, "e": 20.0, "c": 60.0}, {"t": 588.0, "d": 1033.4, "hr": 98.0, "p": 140.0, "s": 1.736, "st": 97.0, "stp": 97.0, "e": 19.6, "c": 59.0}, {"t": 600.0, "d": 1055.8, "hr": 102.0, "p": 144.0, "s": 1.708, "st": 97.0, "stp": 97.0, "e": 19.8, "c": 60.0}, {"t": 612.0, "d": 1092.6, "hr": 108.0, "p": 313.0, "s": 3.079, "st": 97.0, "stp": 97.0, "e": 19.8, "c": 81.0}, {"t": 624.0, "d": 1130.0, "hr": 122.0, "p": 318.0, "s": 2.865, "st": 97.0, "stp": 97.0, "e": 19.2, "c": 81.0}, {"t": 636.0, "d": 1167.2, "hr": 128.0, "p": 333.0, "s": 2.977, "st": 97.0, "stp": 97.0, "e": 19.8, "c": 82.0}, {"t": 648.0, "d": 1205.5, "hr": 130.0, "p": 359.0, "s": 3.098, "st": 97.0, "stp": 97.0, "e": 19.8, "c": 83.0}, {"t": 660.0, "d": 1242.2, "hr": 134.0, "p": 335.0, "s": 3.135, "st": 97.0, "stp": 97.0, "e": 19.4, "c": 84.0}, {"t": 672.0, "d": 1262.2, "hr": 137.0, "p": 139.0, "s": 1.68, "st": 96.0, "stp": 96.0, "e": 19.8, "c": 56.0}, {"t": 684.0, "d": 1282.7, "hr": 132.0, "p": 167.0, "s": 2.062, "st": 96.0, "stp": 96.0, "e": 19.6, "c": 57.0}, {"t": 696.0, "d": 1302.6, "hr": 125.0, "p": 158.0, "s": 1.959, "st": 96.0, "stp": 96.0, "e": 19.4, "c": 56.0}, {"t": 708.0, "d": 1322.4, "hr": 120.0, "p": 144.0, "s": 1.838, "st": 96.0, "stp": 96.0, "e": 19.2, "c": 57.0}, {"t": 720.0, "d": 1341.4, "hr": 119.0, "p": 141.0, "s": 1.726, "st": 96.0, "stp": 96.0, "e": 19.4, "c": 57.0}, {"t": 732.0, "d": 1365.6, "hr": 107.0, "p": 152.0, "s": 1.782, "st": 96.0, "stp": 96.0, "e": 19.6, "c": 57.0}, {"t": 744.0, "d": 1393.0, "hr": 103.0, "p": 231.0, "s": 1.801, "st": 96.0, "stp": 96.0, "e": 19.6, "c": 81.0}, {"t": 756.0, "d": 1427.9, "hr": 119.0, "p": 333.0, "s": 2.547, "st": 96.0, "stp": 96.0, "e": 19.8, "c": 81.0}, {"t": 768.0, "d": 1464.3, "hr": 125.0, "p": 349.0, "s": 2.706, "st": 96.0, "stp": 96.0, "e": 19.8, "c": 82.0}, {"t": 780.0, "d": 1498.9, "hr": 131.0, "p": 338.0, "s": 2.827, "st": 96.0, "stp": 96.0, "e": 20.0, "c": 82.0}, {"t": 790.0, "d": 1526.5, "hr": 134.0, "p": 339.0, "s": 2.911, "st": 95.0, "stp": 95.0, "e": 20.0, "c": 83.0}, {"t": 801.0, "d": 1545.5, "hr": 135.0, "p": 172.0, "s": 2.043, "st": 95.0, "stp": 95.0, "e": 20.2, "c": 57.0}, {"t": 813.0, "d": 1563.4, "hr": 133.0, "p": 158.0, "s": 1.847, "st": 95.0, "stp": 95.0, "e": 19.6, "c": 61.0}, {"t": 825.0, "d": 1580.8, "hr": 127.0, "p": 135.0, "s": 1.689, "st": 95.0, "stp": 95.0, "e": 20.0, "c": 57.0}, {"t": 837.0, "d": 1601.8, "hr": 119.0, "p": 160.0, "s": 1.736, "st": 95.0, "stp": 95.0, "e": 20.8, "c": 57.0}, {"t": 849.0, "d": 1620.0, "hr": 117.0, "p": 163.0, "s": 1.596, "st": 95.0, "stp": 95.0, "e": 21.0, "c": 57.0}, {"t": 861.0, "d": 1639.8, "hr": 109.0, "p": 150.0, "s": 1.624, "st": 95.0, "stp": 95.0, "e": 21.0, "c": 57.0}, {"t": 873.0, "d": 1665.8, "hr": 104.0, "p": 66.0, "s": 1.614, "st": 95.0, "stp": 95.0, "e": 20.6, "c": 0}, {"t": 882.0, "d": 1695.2, "hr": 103.0, "p": 324.0, "s": 2.65, "st": 95.0, "stp": 95.0, "e": 20.4, "c": 82.0}, {"t": 894.0, "d": 1732.8, "hr": 108.0, "p": 327.0, "s": 2.818, "st": 95.0, "stp": 95.0, "e": 20.4, "c": 82.0}, {"t": 906.0, "d": 1769.5, "hr": 127.0, "p": 349.0, "s": 2.986, "st": 95.0, "stp": 95.0, "e": 20.8, "c": 83.0}, {"t": 918.0, "d": 1805.7, "hr": 135.0, "p": 356.0, "s": 2.921, "st": 95.0, "stp": 95.0, "e": 20.8, "c": 83.0}, {"t": 930.0, "d": 1826.0, "hr": 137.0, "p": 184.0, "s": 2.165, "st": 94.0, "stp": 94.0, "e": 20.8, "c": 57.0}, {"t": 942.0, "d": 1845.7, "hr": 133.0, "p": 167.0, "s": 1.95, "st": 94.0, "stp": 94.0, "e": 21.0, "c": 59.0}, {"t": 954.0, "d": 1864.5, "hr": 127.0, "p": 154.0, "s": 1.866, "st": 94.0, "stp": 94.0, "e": 20.4, "c": 59.0}, {"t": 966.0, "d": 1884.3, "hr": 122.0, "p": 148.0, "s": 1.764, "st": 94.0, "stp": 94.0, "e": 20.6, "c": 59.0}, {"t": 978.0, "d": 1904.6, "hr": 118.0, "p": 148.0, "s": 1.764, "st": 94.0, "stp": 94.0, "e": 20.4, "c": 59.0}, {"t": 990.0, "d": 1924.4, "hr": 111.0, "p": 147.0, "s": 1.708, "st": 94.0, "stp": 94.0, "e": 20.4, "c": 59.0}, {"t": 1002.0, "d": 1944.2, "hr": 107.0, "p": 140.0, "s": 1.689, "st": 94.0, "stp": 94.0, "e": 20.4, "c": 59.0}, {"t": 1014.0, "d": 1978.8, "hr": 111.0, "p": 384.0, "s": 2.51, "st": 94.0, "stp": 94.0, "e": 20.6, "c": 81.0}, {"t": 1023.0, "d": 2006.7, "hr": 116.0, "p": 296.0, "s": 2.771, "st": 94.0, "stp": 94.0, "e": 20.6, "c": 82.0}, {"t": 1035.0, "d": 2039.7, "hr": 123.0, "p": 302.0, "s": 2.622, "st": 94.0, "stp": 94.0, "e": 20.6, "c": 82.0}, {"t": 1047.0, "d": 2074.4, "hr": 130.0, "p": 308.0, "s": 2.697, "st": 94.0, "stp": 94.0, "e": 20.8, "c": 81.0}, {"t": 1059.0, "d": 2107.4, "hr": 135.0, "p": 314.0, "s": 2.753, "st": 93.0, "stp": 93.0, "e": 20.6, "c": 81.0}, {"t": 1071.0, "d": 2139.0, "hr": 137.0, "p": 308.0, "s": 2.687, "st": 93.0, "stp": 93.0, "e": 20.6, "c": 81.0}, {"t": 1083.0, "d": 2157.8, "hr": 137.0, "p": 157.0, "s": 1.978, "st": 93.0, "stp": 93.0, "e": 20.4, "c": 58.0}, {"t": 1095.0, "d": 2177.5, "hr": 133.0, "p": 159.0, "s": 1.866, "st": 93.0, "stp": 93.0, "e": 20.4, "c": 59.0}, {"t": 1107.0, "d": 2197.8, "hr": 125.0, "p": 155.0, "s": 1.801, "st": 93.0, "stp": 93.0, "e": 20.4, "c": 59.0}, {"t": 1119.0, "d": 2217.1, "hr": 121.0, "p": 154.0, "s": 1.736, "st": 93.0, "stp": 93.0, "e": 20.6, "c": 59.0}, {"t": 1131.0, "d": 2237.8, "hr": 114.0, "p": 145.0, "s": 1.698, "st": 93.0, "stp": 93.0, "e": 20.4, "c": 60.0}, {"t": 1143.0, "d": 2257.5, "hr": 112.0, "p": 142.0, "s": 1.661, "st": 93.0, "stp": 93.0, "e": 20.4, "c": 60.0}, {"t": 1155.0, "d": 2277.0, "hr": 111.0, "p": 140.0, "s": 1.633, "st": 93.0, "stp": 93.0, "e": 20.6, "c": 58.0}, {"t": 1167.0, "d": 2296.1, "hr": 108.0, "p": 147.0, "s": 1.614, "st": 93.0, "stp": 93.0, "e": 20.8, "c": 61.0}, {"t": 1176.0, "d": 2321.9, "hr": 109.0, "p": 288.0, "s": 2.305, "st": 93.0, "stp": 93.0, "e": 20.6, "c": 80.0}, {"t": 1188.0, "d": 2354.8, "hr": 117.0, "p": 299.0, "s": 2.445, "st": 93.0, "stp": 93.0, "e": 21.0, "c": 80.0}, {"t": 1197.0, "d": 2377.0, "hr": 119.0, "p": 268.0, "s": 2.295, "st": 92.0, "stp": 92.0, "e": 21.0, "c": 81.0}, {"t": 1209.0, "d": 2406.6, "hr": 125.0, "p": 257.0, "s": 2.342, "st": 92.0, "stp": 92.0, "e": 20.8, "c": 81.0}, {"t": 1221.0, "d": 2439.5, "hr": 128.0, "p": 267.0, "s": 2.491, "st": 92.0, "stp": 92.0, "e": 21.0, "c": 81.0}, {"t": 1233.0, "d": 2470.8, "hr": 129.0, "p": 268.0, "s": 2.547, "st": 92.0, "stp": 92.0, "e": 20.6, "c": 81.0}, {"t": 1245.0, "d": 2502.5, "hr": 134.0, "p": 280.0, "s": 2.594, "st": 92.0, "stp": 92.0, "e": 20.6, "c": 80.0}, {"t": 1257.0, "d": 2523.4, "hr": 134.0, "p": 154.0, "s": 2.109, "st": 92.0, "stp": 92.0, "e": 20.6, "c": 59.0}, {"t": 1269.0, "d": 2543.8, "hr": 129.0, "p": 149.0, "s": 1.885, "st": 92.0, "stp": 92.0, "e": 20.6, "c": 61.0}, {"t": 1281.0, "d": 2564.7, "hr": 124.0, "p": 143.0, "s": 1.857, "st": 92.0, "stp": 92.0, "e": 20.4, "c": 60.0}, {"t": 1293.0, "d": 2584.1, "hr": 118.0, "p": 138.0, "s": 1.773, "st": 92.0, "stp": 92.0, "e": 20.4, "c": 60.0}, {"t": 1305.0, "d": 2604.1, "hr": 111.0, "p": 131.0, "s": 1.717, "st": 92.0, "stp": 92.0, "e": 20.4, "c": 59.0}, {"t": 1317.0, "d": 2623.5, "hr": 109.0, "p": 132.0, "s": 1.68, "st": 92.0, "stp": 92.0, "e": 20.2, "c": 59.0}, {"t": 1329.0, "d": 2648.7, "hr": 107.0, "p": 211.0, "s": 1.689, "st": 91.0, "stp": 91.0, "e": 20.2, "c": 80.0}, {"t": 1341.0, "d": 2680.9, "hr": 113.0, "p": 258.0, "s": 2.333, "st": 91.0, "stp": 91.0, "e": 20.4, "c": 80.0}, {"t": 1353.0, "d": 2711.7, "hr": 118.0, "p": 234.0, "s": 2.295, "st": 91.0, "stp": 91.0, "e": 20.2, "c": 80.0}, {"t": 1365.0, "d": 2745.1, "hr": 124.0, "p": 276.0, "s": 2.697, "st": 91.0, "stp": 91.0, "e": 20.0, "c": 81.0}, {"t": 1377.0, "d": 2777.4, "hr": 129.0, "p": 275.0, "s": 2.725, "st": 91.0, "stp": 91.0, "e": 19.4, "c": 82.0}, {"t": 1389.0, "d": 2810.5, "hr": 131.0, "p": 270.0, "s": 2.706, "st": 91.0, "stp": 91.0, "e": 19.0, "c": 82.0}, {"t": 1398.0, "d": 2828.9, "hr": 132.0, "p": 124.0, "s": 2.678, "st": 91.0, "stp": 91.0, "e": 18.8, "c": 40.0}, {"t": 1410.0, "d": 2852.9, "hr": 132.0, "p": 208.0, "s": 2.239, "st": 91.0, "stp": 91.0, "e": 18.6, "c": 62.0}, {"t": 1422.0, "d": 2873.9, "hr": 130.0, "p": 191.0, "s": 2.044, "st": 91.0, "stp": 91.0, "e": 18.4, "c": 64.0}, {"t": 1434.0, "d": 2893.4, "hr": 125.0, "p": 134.0, "s": 1.736, "st": 91.0, "stp": 91.0, "e": 18.2, "c": 60.0}, {"t": 1446.0, "d": 2913.2, "hr": 117.0, "p": 150.0, "s": 1.764, "st": 90.0, "stp": 90.0, "e": 18.2, "c": 62.0}, {"t": 1458.0, "d": 2933.5, "hr": 114.0, "p": 155.0, "s": 1.698, "st": 90.0, "stp": 90.0, "e": 18.4, "c": 62.0}, {"t": 1470.0, "d": 2954.0, "hr": 112.0, "p": 144.0, "s": 1.661, "st": 90.0, "stp": 90.0, "e": 18.6, "c": 61.0}, {"t": 1482.0, "d": 2974.1, "hr": 108.0, "p": 138.0, "s": 1.652, "st": 90.0, "stp": 90.0, "e": 18.4, "c": 61.0}, {"t": 1494.0, "d": 3006.2, "hr": 111.0, "p": 249.0, "s": 2.211, "st": 90.0, "stp": 90.0, "e": 18.4, "c": 80.0}, {"t": 1506.0, "d": 3037.1, "hr": 117.0, "p": 252.0, "s": 2.361, "st": 90.0, "stp": 90.0, "e": 18.0, "c": 80.0}, {"t": 1518.0, "d": 3068.2, "hr": 122.0, "p": 257.0, "s": 2.463, "st": 90.0, "stp": 90.0, "e": 17.8, "c": 83.0}, {"t": 1530.0, "d": 3100.3, "hr": 129.0, "p": 268.0, "s": 2.538, "st": 90.0, "stp": 90.0, "e": 18.2, "c": 81.0}, {"t": 1542.0, "d": 3132.1, "hr": 130.0, "p": 277.0, "s": 2.557, "st": 90.0, "stp": 90.0, "e": 18.0, "c": 82.0}, {"t": 1554.0, "d": 3163.6, "hr": 131.0, "p": 276.0, "s": 2.613, "st": 90.0, "stp": 90.0, "e": 17.6, "c": 81.0}, {"t": 1566.0, "d": 3189.9, "hr": 132.0, "p": 128.0, "s": 2.575, "st": 89.0, "stp": 89.0, "e": 17.8, "c": 61.0}, {"t": 1578.0, "d": 3208.8, "hr": 126.0, "p": 144.0, "s": 1.941, "st": 89.0, "stp": 89.0, "e": 17.4, "c": 58.0}, {"t": 1590.0, "d": 3227.7, "hr": 124.0, "p": 139.0, "s": 1.848, "st": 89.0, "stp": 89.0, "e": 17.6, "c": 59.0}, {"t": 1602.0, "d": 3247.6, "hr": 124.0, "p": 131.0, "s": 1.754, "st": 89.0, "stp": 89.0, "e": 17.4, "c": 58.0}, {"t": 1614.0, "d": 3267.2, "hr": 110.0, "p": 130.0, "s": 1.717, "st": 89.0, "stp": 89.0, "e": 17.2, "c": 60.0}, {"t": 1626.0, "d": 3288.1, "hr": 106.0, "p": 128.0, "s": 1.67, "st": 89.0, "stp": 89.0, "e": 17.2, "c": 59.0}, {"t": 1638.0, "d": 3320.3, "hr": 109.0, "p": 241.0, "s": 2.333, "st": 89.0, "stp": 89.0, "e": 17.0, "c": 80.0}, {"t": 1650.0, "d": 3352.0, "hr": 114.0, "p": 257.0, "s": 2.426, "st": 89.0, "stp": 89.0, "e": 17.0, "c": 81.0}, {"t": 1662.0, "d": 3382.5, "hr": 118.0, "p": 260.0, "s": 2.445, "st": 89.0, "stp": 89.0, "e": 16.8, "c": 81.0}, {"t": 1674.0, "d": 3414.6, "hr": 123.0, "p": 269.0, "s": 2.547, "st": 89.0, "stp": 89.0, "e": 17.2, "c": 81.0}, {"t": 1686.0, "d": 3444.6, "hr": 128.0, "p": 267.0, "s": 2.538, "st": 89.0, "stp": 89.0, "e": 16.8, "c": 81.0}, {"t": 1698.0, "d": 3474.1, "hr": 129.0, "p": 264.0, "s": 2.529, "st": 89.0, "stp": 89.0, "e": 16.8, "c": 80.0}, {"t": 1710.0, "d": 3503.4, "hr": 127.0, "p": 264.0, "s": 2.501, "st": 88.0, "stp": 88.0, "e": 16.8, "c": 81.0}, {"t": 1722.0, "d": 3533.2, "hr": 125.0, "p": 262.0, "s": 2.491, "st": 88.0, "stp": 88.0, "e": 17.0, "c": 81.0}, {"t": 1734.0, "d": 3561.9, "hr": 125.0, "p": 261.0, "s": 2.463, "st": 88.0, "stp": 88.0, "e": 17.0, "c": 80.0}, {"t": 1746.0, "d": 3592.3, "hr": 126.0, "p": 268.0, "s": 2.473, "st": 88.0, "stp": 88.0, "e": 17.0, "c": 81.0}, {"t": 1758.0, "d": 3621.9, "hr": 128.0, "p": 265.0, "s": 2.482, "st": 88.0, "stp": 88.0, "e": 17.0, "c": 81.0}, {"t": 1770.0, "d": 3651.4, "hr": 126.0, "p": 265.0, "s": 2.473, "st": 88.0, "stp": 88.0, "e": 17.0, "c": 81.0}, {"t": 1782.0, "d": 3680.9, "hr": 122.0, "p": 266.0, "s": 2.473, "st": 88.0, "stp": 88.0, "e": 17.0, "c": 80.0}, {"t": 1794.0, "d": 3710.4, "hr": 129.0, "p": 261.0, "s": 2.454, "st": 88.0, "stp": 88.0, "e": 16.8, "c": 82.0}, {"t": 1806.0, "d": 3739.4, "hr": 128.0, "p": 258.0, "s": 2.445, "st": 87.0, "stp": 87.0, "e": 17.0, "c": 82.0}, {"t": 1818.0, "d": 3769.2, "hr": 129.0, "p": 260.0, "s": 2.445, "st": 87.0, "stp": 87.0, "e": 16.6, "c": 82.0}, {"t": 1830.0, "d": 3798.9, "hr": 130.0, "p": 261.0, "s": 2.463, "st": 87.0, "stp": 87.0, "e": 16.8, "c": 82.0}, {"t": 1842.0, "d": 3826.0, "hr": 132.0, "p": 0, "s": 2.463, "st": 87.0, "stp": 87.0, "e": 16.6, "c": 0}, {"t": 1854.0, "d": 3846.0, "hr": 131.0, "p": 191.0, "s": 2.006, "st": 87.0, "stp": 87.0, "e": 16.8, "c": 64.0}, {"t": 1866.0, "d": 3868.0, "hr": 128.0, "p": 153.0, "s": 1.885, "st": 87.0, "stp": 87.0, "e": 16.8, "c": 61.0}, {"t": 1878.0, "d": 3888.4, "hr": 123.0, "p": 142.0, "s": 1.764, "st": 87.0, "stp": 87.0, "e": 16.6, "c": 61.0}, {"t": 1890.0, "d": 3908.2, "hr": 112.0, "p": 151.0, "s": 1.708, "st": 87.0, "stp": 87.0, "e": 16.4, "c": 62.0}, {"t": 1899.0, "d": 3922.4, "hr": 109.0, "p": 128.0, "s": 1.661, "st": 87.0, "stp": 87.0, "e": 16.4, "c": 61.0}, {"t": 1911.0, "d": 3951.6, "hr": 109.0, "p": 242.0, "s": 1.987, "st": 87.0, "stp": 87.0, "e": 16.4, "c": 81.0}, {"t": 1923.0, "d": 3982.9, "hr": 115.0, "p": 259.0, "s": 2.351, "st": 87.0, "stp": 87.0, "e": 16.6, "c": 81.0}, {"t": 1935.0, "d": 4015.1, "hr": 123.0, "p": 271.0, "s": 2.463, "st": 86.0, "stp": 86.0, "e": 16.8, "c": 81.0}, {"t": 1947.0, "d": 4045.8, "hr": 127.0, "p": 265.0, "s": 2.501, "st": 86.0, "stp": 86.0, "e": 16.6, "c": 80.0}, {"t": 1959.0, "d": 4076.0, "hr": 128.0, "p": 257.0, "s": 2.482, "st": 86.0, "stp": 86.0, "e": 16.4, "c": 80.0}, {"t": 1971.0, "d": 4105.5, "hr": 129.0, "p": 255.0, "s": 2.491, "st": 86.0, "stp": 86.0, "e": 16.2, "c": 80.0}, {"t": 1983.0, "d": 4135.3, "hr": 129.0, "p": 256.0, "s": 2.482, "st": 86.0, "stp": 86.0, "e": 16.4, "c": 81.0}, {"t": 1995.0, "d": 4164.5, "hr": 131.0, "p": 255.0, "s": 2.463, "st": 86.0, "stp": 86.0, "e": 16.0, "c": 81.0}, {"t": 2007.0, "d": 4194.7, "hr": 131.0, "p": 256.0, "s": 2.482, "st": 86.0, "stp": 86.0, "e": 16.0, "c": 81.0}, {"t": 2019.0, "d": 4224.6, "hr": 129.0, "p": 258.0, "s": 2.491, "st": 86.0, "stp": 86.0, "e": 15.8, "c": 80.0}, {"t": 2031.0, "d": 4254.9, "hr": 129.0, "p": 261.0, "s": 2.491, "st": 85.0, "stp": 85.0, "e": 16.0, "c": 81.0}, {"t": 2043.0, "d": 4285.4, "hr": 127.0, "p": 264.0, "s": 2.51, "st": 85.0, "stp": 85.0, "e": 16.0, "c": 82.0}, {"t": 2055.0, "d": 4316.1, "hr": 130.0, "p": 270.0, "s": 2.547, "st": 85.0, "stp": 85.0, "e": 16.2, "c": 82.0}, {"t": 2067.0, "d": 4344.7, "hr": 132.0, "p": 272.0, "s": 2.547, "st": 85.0, "stp": 85.0, "e": 16.2, "c": 81.0}, {"t": 2079.0, "d": 4363.9, "hr": 127.0, "p": 141.0, "s": 1.913, "st": 85.0, "stp": 85.0, "e": 16.2, "c": 60.0}, {"t": 2091.0, "d": 4384.2, "hr": 124.0, "p": 165.0, "s": 1.829, "st": 85.0, "stp": 85.0, "e": 16.2, "c": 61.0}, {"t": 2103.0, "d": 4404.2, "hr": 122.0, "p": 160.0, "s": 1.754, "st": 85.0, "stp": 85.0, "e": 16.6, "c": 62.0}, {"t": 2115.0, "d": 4424.2, "hr": 113.0, "p": 135.0, "s": 1.708, "st": 85.0, "stp": 85.0, "e": 16.6, "c": 61.0}, {"t": 2127.0, "d": 4445.7, "hr": 107.0, "p": 156.0, "s": 1.717, "st": 85.0, "stp": 85.0, "e": 16.8, "c": 62.0}, {"t": 2139.0, "d": 4473.6, "hr": 106.0, "p": 238.0, "s": 2.053, "st": 85.0, "stp": 85.0, "e": 16.6, "c": 80.0}, {"t": 2151.0, "d": 4503.3, "hr": 111.0, "p": 247.0, "s": 2.267, "st": 85.0, "stp": 85.0, "e": 16.4, "c": 81.0}, {"t": 2163.0, "d": 4533.9, "hr": 115.0, "p": 253.0, "s": 2.426, "st": 84.0, "stp": 84.0, "e": 16.2, "c": 81.0}, {"t": 2175.0, "d": 4563.5, "hr": 120.0, "p": 252.0, "s": 2.435, "st": 84.0, "stp": 84.0, "e": 16.4, "c": 81.0}, {"t": 2187.0, "d": 4593.0, "hr": 123.0, "p": 255.0, "s": 2.435, "st": 84.0, "stp": 84.0, "e": 16.6, "c": 80.0}, {"t": 2199.0, "d": 4622.6, "hr": 125.0, "p": 270.0, "s": 2.463, "st": 84.0, "stp": 84.0, "e": 17.0, "c": 81.0}, {"t": 2211.0, "d": 4651.8, "hr": 127.0, "p": 272.0, "s": 2.454, "st": 84.0, "stp": 84.0, "e": 16.8, "c": 80.0}, {"t": 2223.0, "d": 4681.2, "hr": 130.0, "p": 260.0, "s": 2.463, "st": 84.0, "stp": 84.0, "e": 16.8, "c": 81.0}, {"t": 2235.0, "d": 4711.4, "hr": 131.0, "p": 258.0, "s": 2.482, "st": 84.0, "stp": 84.0, "e": 16.6, "c": 81.0}, {"t": 2247.0, "d": 4735.8, "hr": 132.0, "p": 250.0, "s": 2.473, "st": 84.0, "stp": 84.0, "e": 16.4, "c": 81.0}, {"t": 2259.0, "d": 4756.1, "hr": 129.0, "p": 184.0, "s": 1.978, "st": 84.0, "stp": 84.0, "e": 16.2, "c": 62.0}, {"t": 2271.0, "d": 4777.2, "hr": 127.0, "p": 160.0, "s": 1.847, "st": 83.0, "stp": 83.0, "e": 16.2, "c": 62.0}, {"t": 2283.0, "d": 4797.7, "hr": 125.0, "p": 134.0, "s": 1.81, "st": 83.0, "stp": 83.0, "e": 16.4, "c": 60.0}, {"t": 2295.0, "d": 4818.7, "hr": 121.0, "p": 136.0, "s": 1.764, "st": 83.0, "stp": 83.0, "e": 16.4, "c": 59.0}, {"t": 2307.0, "d": 4839.2, "hr": 114.0, "p": 147.0, "s": 1.745, "st": 83.0, "stp": 83.0, "e": 16.8, "c": 60.0}, {"t": 2319.0, "d": 4859.6, "hr": 109.0, "p": 143.0, "s": 1.736, "st": 83.0, "stp": 83.0, "e": 16.8, "c": 60.0}, {"t": 2331.0, "d": 4884.5, "hr": 108.0, "p": 240.0, "s": 1.764, "st": 83.0, "stp": 83.0, "e": 17.0, "c": 79.0}, {"t": 2343.0, "d": 4914.4, "hr": 113.0, "p": 247.0, "s": 2.258, "st": 83.0, "stp": 83.0, "e": 17.0, "c": 79.0}, {"t": 2355.0, "d": 4943.9, "hr": 116.0, "p": 246.0, "s": 2.305, "st": 83.0, "stp": 83.0, "e": 16.6, "c": 80.0}, {"t": 2367.0, "d": 4972.0, "hr": 121.0, "p": 241.0, "s": 2.314, "st": 83.0, "stp": 83.0, "e": 16.6, "c": 79.0}, {"t": 2379.0, "d": 5000.2, "hr": 123.0, "p": 244.0, "s": 2.323, "st": 83.0, "stp": 83.0, "e": 16.8, "c": 80.0}, {"t": 2391.0, "d": 5028.5, "hr": 124.0, "p": 247.0, "s": 2.361, "st": 83.0, "stp": 83.0, "e": 16.6, "c": 80.0}, {"t": 2403.0, "d": 5054.2, "hr": 124.0, "p": 242.0, "s": 2.351, "st": 83.0, "stp": 83.0, "e": 16.4, "c": 81.0}, {"t": 2415.0, "d": 5073.1, "hr": 125.0, "p": 140.0, "s": 1.866, "st": 82.0, "stp": 82.0, "e": 16.4, "c": 59.0}, {"t": 2427.0, "d": 5094.9, "hr": 123.0, "p": 162.0, "s": 1.829, "st": 82.0, "stp": 82.0, "e": 16.0, "c": 62.0}, {"t": 2439.0, "d": 5117.5, "hr": 121.0, "p": 177.0, "s": 1.922, "st": 82.0, "stp": 82.0, "e": 15.8, "c": 67.0}, {"t": 2451.0, "d": 5139.9, "hr": 118.0, "p": 178.0, "s": 1.894, "st": 82.0, "stp": 82.0, "e": 15.8, "c": 67.0}, {"t": 2463.0, "d": 5162.6, "hr": 116.0, "p": 173.0, "s": 1.885, "st": 82.0, "stp": 82.0, "e": 15.6, "c": 66.0}, {"t": 2475.0, "d": 5185.3, "hr": 118.0, "p": 174.0, "s": 1.885, "st": 82.0, "stp": 82.0, "e": 15.8, "c": 65.0}, {"t": 2487.0, "d": 5207.2, "hr": 117.0, "p": 177.0, "s": 1.866, "st": 82.0, "stp": 82.0, "e": 15.8, "c": 66.0}, {"t": 2499.0, "d": 5228.4, "hr": 116.0, "p": 172.0, "s": 1.838, "st": 82.0, "stp": 82.0, "e": 15.8, "c": 66.0}, {"t": 2511.0, "d": 5250.7, "hr": 115.0, "p": 179.0, "s": 1.829, "st": 82.0, "stp": 82.0, "e": 16.2, "c": 66.0}, {"t": 2523.0, "d": 5271.9, "hr": 115.0, "p": 176.0, "s": 1.81, "st": 82.0, "stp": 82.0, "e": 16.2, "c": 64.0}, {"t": 2535.0, "d": 5293.2, "hr": 116.0, "p": 176.0, "s": 1.791, "st": 82.0, "stp": 82.0, "e": 16.4, "c": 65.0}, {"t": 2547.0, "d": 5314.7, "hr": 116.0, "p": 169.0, "s": 1.782, "st": 82.0, "stp": 82.0, "e": 16.4, "c": 64.0}, {"t": 2559.0, "d": 5336.4, "hr": 114.0, "p": 160.0, "s": 1.773, "st": 82.0, "stp": 82.0, "e": 16.4, "c": 64.0}, {"t": 2571.0, "d": 5357.9, "hr": 113.0, "p": 161.0, "s": 1.773, "st": 82.0, "stp": 82.0, "e": 16.2, "c": 65.0}, {"t": 2583.0, "d": 5379.4, "hr": 110.0, "p": 162.0, "s": 1.773, "st": 82.0, "stp": 82.0, "e": 16.4, "c": 64.0}, {"t": 2595.0, "d": 5402.9, "hr": 104.0, "p": 155.0, "s": 1.764, "st": 82.0, "stp": 82.0, "e": 15.8, "c": 62.0}, {"t": 2605.0, "d": 5433.8, "hr": 119.0, "p": 371.0, "s": 2.454, "st": 82.0, "stp": 82.0, "e": 16.0, "c": 85.0}, {"t": 2616.0, "d": 5467.6, "hr": 126.0, "p": 303.0, "s": 2.687, "st": 81.0, "stp": 81.0, "e": 16.4, "c": 82.0}, {"t": 2628.0, "d": 5505.0, "hr": 133.0, "p": 311.0, "s": 2.939, "st": 81.0, "stp": 81.0, "e": 15.8, "c": 83.0}, {"t": 2640.0, "d": 5543.0, "hr": 136.0, "p": 317.0, "s": 3.07, "st": 81.0, "stp": 81.0, "e": 14.6, "c": 83.0}, {"t": 2652.0, "d": 5580.6, "hr": 139.0, "p": 293.0, "s": 3.079, "st": 81.0, "stp": 81.0, "e": 14.2, "c": 85.0}, {"t": 2661.0, "d": 5606.9, "hr": 140.0, "p": 308.0, "s": 3.051, "st": 81.0, "stp": 81.0, "e": 14.2, "c": 84.0}, {"t": 2673.0, "d": 5642.6, "hr": 140.0, "p": 328.0, "s": 3.079, "st": 81.0, "stp": 81.0, "e": 13.8, "c": 84.0}, {"t": 2685.0, "d": 5674.1, "hr": 134.0, "p": 338.0, "s": 2.837, "st": 81.0, "stp": 81.0, "e": 15.6, "c": 84.0}, {"t": 2697.0, "d": 5707.0, "hr": 141.0, "p": 362.0, "s": 2.809, "st": 80.0, "stp": 80.0, "e": 15.8, "c": 84.0}, {"t": 2709.0, "d": 5731.4, "hr": 142.0, "p": 255.0, "s": 2.464, "st": 80.0, "stp": 80.0, "e": 15.8, "c": 65.0}, {"t": 2721.0, "d": 5753.0, "hr": 140.0, "p": 194.0, "s": 2.035, "st": 80.0, "stp": 80.0, "e": 15.6, "c": 65.0}, {"t": 2733.0, "d": 5775.0, "hr": 138.0, "p": 188.0, "s": 1.988, "st": 80.0, "stp": 80.0, "e": 15.6, "c": 65.0}, {"t": 2745.0, "d": 5797.0, "hr": 132.0, "p": 189.0, "s": 1.922, "st": 80.0, "stp": 80.0, "e": 15.6, "c": 68.0}, {"t": 2757.0, "d": 5818.6, "hr": 124.0, "p": 176.0, "s": 1.847, "st": 80.0, "stp": 80.0, "e": 15.6, "c": 65.0}, {"t": 2769.0, "d": 5840.1, "hr": 122.0, "p": 174.0, "s": 1.81, "st": 80.0, "stp": 80.0, "e": 15.8, "c": 64.0}, {"t": 2781.0, "d": 5862.5, "hr": 122.0, "p": 173.0, "s": 1.801, "st": 80.0, "stp": 80.0, "e": 15.8, "c": 65.0}, {"t": 2793.0, "d": 5885.4, "hr": 120.0, "p": 170.0, "s": 1.801, "st": 80.0, "stp": 80.0, "e": 15.8, "c": 65.0}, {"t": 2805.0, "d": 5906.1, "hr": 118.0, "p": 169.0, "s": 1.791, "st": 80.0, "stp": 80.0, "e": 16.0, "c": 64.0}, {"t": 2817.0, "d": 5927.7, "hr": 117.0, "p": 164.0, "s": 1.773, "st": 80.0, "stp": 80.0, "e": 15.8, "c": 64.0}, {"t": 2829.0, "d": 5949.8, "hr": 115.0, "p": 167.0, "s": 1.754, "st": 80.0, "stp": 80.0, "e": 16.2, "c": 64.0}, {"t": 2841.0, "d": 5971.5, "hr": 114.0, "p": 183.0, "s": 1.764, "st": 80.0, "stp": 80.0, "e": 16.6, "c": 65.0}, {"t": 2853.0, "d": 5992.7, "hr": 111.0, "p": 170.0, "s": 1.745, "st": 80.0, "stp": 80.0, "e": 16.4, "c": 65.0}, {"t": 2865.0, "d": 6014.2, "hr": 112.0, "p": 158.0, "s": 1.726, "st": 79.0, "stp": 79.0, "e": 16.2, "c": 64.0}, {"t": 2877.0, "d": 6035.9, "hr": 112.0, "p": 158.0, "s": 1.745, "st": 79.0, "stp": 79.0, "e": 16.0, "c": 64.0}, {"t": 2889.0, "d": 6067.4, "hr": 113.0, "p": 289.0, "s": 2.37, "st": 79.0, "stp": 79.0, "e": 16.0, "c": 85.0}, {"t": 2901.0, "d": 6105.9, "hr": 126.0, "p": 294.0, "s": 2.865, "st": 78.0, "stp": 79.0, "e": 16.0, "c": 85.0}, {"t": 2913.0, "d": 6143.4, "hr": 133.0, "p": 304.0, "s": 2.921, "st": 77.0, "stp": 79.0, "e": 16.4, "c": 84.0}, {"t": 2925.0, "d": 6179.1, "hr": 139.0, "p": 306.0, "s": 2.921, "st": 77.0, "stp": 79.0, "e": 16.4, "c": 84.0}, {"t": 2937.0, "d": 6214.0, "hr": 142.0, "p": 317.0, "s": 2.911, "st": 77.0, "stp": 79.0, "e": 16.6, "c": 84.0}, {"t": 2949.0, "d": 6249.1, "hr": 144.0, "p": 325.0, "s": 2.911, "st": 77.0, "stp": 79.0, "e": 16.8, "c": 84.0}, {"t": 2961.0, "d": 6285.0, "hr": 144.0, "p": 334.0, "s": 2.977, "st": 77.0, "stp": 78.0, "e": 17.4, "c": 85.0}, {"t": 2973.0, "d": 6321.1, "hr": 145.0, "p": 329.0, "s": 2.986, "st": 77.0, "stp": 78.0, "e": 17.4, "c": 85.0}, {"t": 2983.0, "d": 6353.2, "hr": 148.0, "p": 337.0, "s": 3.079, "st": 77.0, "stp": 78.0, "e": 17.8, "c": 85.0}, {"t": 2994.0, "d": 6386.8, "hr": 147.0, "p": 336.0, "s": 3.061, "st": 77.0, "stp": 78.0, "e": 17.8, "c": 83.0}, {"t": 3006.0, "d": 6415.4, "hr": 146.0, "p": 348.0, "s": 3.061, "st": 77.0, "stp": 78.0, "e": 17.8, "c": 84.0}, {"t": 3015.0, "d": 6430.5, "hr": 141.0, "p": 222.0, "s": 1.53, "st": 77.0, "stp": 78.0, "e": 17.0, "c": 63.0}, {"t": 3027.0, "d": 6451.6, "hr": 137.0, "p": 170.0, "s": 1.988, "st": 77.0, "stp": 78.0, "e": 15.2, "c": 64.0}, {"t": 3039.0, "d": 6474.6, "hr": 126.0, "p": 179.0, "s": 2.016, "st": 77.0, "stp": 78.0, "e": 14.6, "c": 64.0}, {"t": 3051.0, "d": 6499.2, "hr": 121.0, "p": 201.0, "s": 2.044, "st": 77.0, "stp": 78.0, "e": 14.4, "c": 64.0}, {"t": 3063.0, "d": 6519.1, "hr": 119.0, "p": 215.0, "s": 1.876, "st": 77.0, "stp": 77.0, "e": 15.4, "c": 65.0}, {"t": 3075.0, "d": 6540.3, "hr": 118.0, "p": 216.0, "s": 1.745, "st": 77.0, "stp": 77.0, "e": 16.4, "c": 61.0}, {"t": 3087.0, "d": 6560.2, "hr": 119.0, "p": 189.0, "s": 1.671, "st": 77.0, "stp": 77.0, "e": 16.4, "c": 61.0}, {"t": 3099.0, "d": 6581.2, "hr": 123.0, "p": 148.0, "s": 1.69, "st": 77.0, "stp": 77.0, "e": 16.6, "c": 62.0}, {"t": 3111.0, "d": 6602.3, "hr": 122.0, "p": 150.0, "s": 1.68, "st": 77.0, "stp": 77.0, "e": 16.6, "c": 63.0}, {"t": 3123.0, "d": 6625.9, "hr": 117.0, "p": 175.0, "s": 1.773, "st": 77.0, "stp": 77.0, "e": 16.6, "c": 66.0}, {"t": 3135.0, "d": 6645.4, "hr": 114.0, "p": 172.0, "s": 1.745, "st": 77.0, "stp": 77.0, "e": 17.0, "c": 66.0}, {"t": 3147.0, "d": 6667.5, "hr": 114.0, "p": 174.0, "s": 1.745, "st": 77.0, "stp": 77.0, "e": 16.8, "c": 66.0}, {"t": 3159.0, "d": 6690.6, "hr": 115.0, "p": 173.0, "s": 1.764, "st": 77.0, "stp": 77.0, "e": 16.8, "c": 66.0}, {"t": 3171.0, "d": 6711.4, "hr": 117.0, "p": 168.0, "s": 1.764, "st": 77.0, "stp": 77.0, "e": 16.8, "c": 65.0}, {"t": 3183.0, "d": 6735.4, "hr": 119.0, "p": 162.0, "s": 1.782, "st": 77.0, "stp": 77.0, "e": 16.8, "c": 61.0}, {"t": 3195.0, "d": 6771.5, "hr": 121.0, "p": 282.0, "s": 2.594, "st": 77.0, "stp": 77.0, "e": 16.8, "c": 83.0}, {"t": 3207.0, "d": 6808.0, "hr": 125.0, "p": 294.0, "s": 2.771, "st": 77.0, "stp": 77.0, "e": 16.8, "c": 84.0}, {"t": 3219.0, "d": 6845.2, "hr": 130.0, "p": 305.0, "s": 2.939, "st": 77.0, "stp": 77.0, "e": 16.6, "c": 84.0}, {"t": 3230.0, "d": 6879.4, "hr": 130.0, "p": 315.0, "s": 2.995, "st": 76.0, "stp": 76.0, "e": 16.8, "c": 87.0}, {"t": 3240.0, "d": 6910.1, "hr": 137.0, "p": 330.0, "s": 3.042, "st": 76.0, "stp": 76.0, "e": 17.0, "c": 84.0}, {"t": 3252.0, "d": 6946.4, "hr": 141.0, "p": 328.0, "s": 3.07, "st": 76.0, "stp": 76.0, "e": 16.8, "c": 85.0}, {"t": 3264.0, "d": 6983.3, "hr": 141.0, "p": 327.0, "s": 3.098, "st": 76.0, "stp": 76.0, "e": 16.6, "c": 84.0}, {"t": 3276.0, "d": 7020.3, "hr": 143.0, "p": 325.0, "s": 3.116, "st": 76.0, "stp": 76.0, "e": 16.6, "c": 85.0}, {"t": 3288.0, "d": 7055.5, "hr": 144.0, "p": 327.0, "s": 3.088, "st": 76.0, "stp": 76.0, "e": 17.2, "c": 84.0}, {"t": 3300.0, "d": 7089.0, "hr": 144.0, "p": 330.0, "s": 3.06, "st": 75.0, "stp": 75.0, "e": 17.2, "c": 85.0}, {"t": 3312.0, "d": 7110.2, "hr": 142.0, "p": 210.0, "s": 2.333, "st": 75.0, "stp": 75.0, "e": 17.2, "c": 62.0}, {"t": 3324.0, "d": 7131.7, "hr": 137.0, "p": 212.0, "s": 2.118, "st": 75.0, "stp": 75.0, "e": 17.6, "c": 64.0}, {"t": 3336.0, "d": 7150.1, "hr": 130.0, "p": 176.0, "s": 1.96, "st": 75.0, "stp": 75.0, "e": 17.4, "c": 62.0}, {"t": 3348.0, "d": 7170.8, "hr": 122.0, "p": 165.0, "s": 1.838, "st": 75.0, "stp": 75.0, "e": 17.4, "c": 62.0}, {"t": 3360.0, "d": 7192.2, "hr": 121.0, "p": 170.0, "s": 1.736, "st": 75.0, "stp": 75.0, "e": 17.6, "c": 64.0}, {"t": 3372.0, "d": 7215.2, "hr": 121.0, "p": 186.0, "s": 1.875, "st": 75.0, "stp": 75.0, "e": 18.0, "c": 65.0}, {"t": 3384.0, "d": 7236.6, "hr": 117.0, "p": 181.0, "s": 1.81, "st": 75.0, "stp": 75.0, "e": 18.2, "c": 64.0}, {"t": 3396.0, "d": 7257.9, "hr": 117.0, "p": 189.0, "s": 1.782, "st": 75.0, "stp": 75.0, "e": 18.6, "c": 64.0}, {"t": 3408.0, "d": 7279.7, "hr": 115.0, "p": 204.0, "s": 1.764, "st": 75.0, "stp": 75.0, "e": 19.2, "c": 65.0}, {"t": 3420.0, "d": 7299.7, "hr": 117.0, "p": 191.0, "s": 1.726, "st": 75.0, "stp": 75.0, "e": 19.4, "c": 63.0}, {"t": 3432.0, "d": 7322.0, "hr": 114.0, "p": 170.0, "s": 1.717, "st": 75.0, "stp": 75.0, "e": 19.4, "c": 63.0}, {"t": 3444.0, "d": 7342.5, "hr": 112.0, "p": 164.0, "s": 1.717, "st": 75.0, "stp": 75.0, "e": 19.4, "c": 65.0}, {"t": 3456.0, "d": 7364.2, "hr": 113.0, "p": 171.0, "s": 1.717, "st": 75.0, "stp": 75.0, "e": 19.8, "c": 64.0}, {"t": 3468.0, "d": 7385.0, "hr": 116.0, "p": 179.0, "s": 1.726, "st": 75.0, "stp": 75.0, "e": 20.0, "c": 65.0}, {"t": 3480.0, "d": 7406.6, "hr": 117.0, "p": 185.0, "s": 1.717, "st": 75.0, "stp": 75.0, "e": 20.2, "c": 65.0}, {"t": 3492.0, "d": 7440.5, "hr": 119.0, "p": 301.0, "s": 2.547, "st": 74.0, "stp": 74.0, "e": 19.8, "c": 83.0}, {"t": 3504.0, "d": 7476.4, "hr": 122.0, "p": 322.0, "s": 2.697, "st": 74.0, "stp": 74.0, "e": 19.4, "c": 83.0}, {"t": 3516.0, "d": 7511.2, "hr": 128.0, "p": 300.0, "s": 2.753, "st": 74.0, "stp": 74.0, "e": 19.0, "c": 85.0}, {"t": 3528.0, "d": 7545.9, "hr": 134.0, "p": 307.0, "s": 2.818, "st": 74.0, "stp": 74.0, "e": 18.6, "c": 85.0}, {"t": 3540.0, "d": 7583.4, "hr": 138.0, "p": 322.0, "s": 2.902, "st": 74.0, "stp": 74.0, "e": 18.2, "c": 86.0}, {"t": 3552.0, "d": 7620.6, "hr": 139.0, "p": 354.0, "s": 3.005, "st": 74.0, "stp": 74.0, "e": 19.0, "c": 86.0}, {"t": 3564.0, "d": 7655.5, "hr": 140.0, "p": 353.0, "s": 3.033, "st": 74.0, "stp": 74.0, "e": 18.6, "c": 85.0}, {"t": 3576.0, "d": 7688.4, "hr": 139.0, "p": 336.0, "s": 2.948, "st": 73.0, "stp": 73.0, "e": 18.4, "c": 84.0}, {"t": 3588.0, "d": 7721.0, "hr": 136.0, "p": 330.0, "s": 2.911, "st": 73.0, "stp": 73.0, "e": 18.6, "c": 85.0}, {"t": 3600.0, "d": 7752.1, "hr": 136.0, "p": 342.0, "s": 2.855, "st": 73.0, "stp": 73.0, "e": 19.2, "c": 84.0}, {"t": 3612.0, "d": 7772.2, "hr": 135.0, "p": 202.0, "s": 2.137, "st": 73.0, "stp": 73.0, "e": 19.4, "c": 61.0}, {"t": 3624.0, "d": 7793.6, "hr": 128.0, "p": 180.0, "s": 1.997, "st": 73.0, "stp": 73.0, "e": 19.2, "c": 61.0}, {"t": 3636.0, "d": 7813.4, "hr": 126.0, "p": 169.0, "s": 1.838, "st": 73.0, "stp": 73.0, "e": 19.0, "c": 62.0}, {"t": 3648.0, "d": 7833.1, "hr": 119.0, "p": 167.0, "s": 1.801, "st": 73.0, "stp": 73.0, "e": 18.6, "c": 62.0}, {"t": 3660.0, "d": 7852.4, "hr": 114.0, "p": 159.0, "s": 1.68, "st": 73.0, "stp": 73.0, "e": 18.4, "c": 63.0}, {"t": 3669.0, "d": 7867.4, "hr": 114.0, "p": 150.0, "s": 1.624, "st": 73.0, "stp": 73.0, "e": 18.4, "c": 62.0}, {"t": 3681.0, "d": 7889.4, "hr": 112.0, "p": 170.0, "s": 1.708, "st": 73.0, "stp": 73.0, "e": 18.6, "c": 63.0}, {"t": 3693.0, "d": 7910.2, "hr": 112.0, "p": 182.0, "s": 1.708, "st": 73.0, "stp": 73.0, "e": 19.0, "c": 62.0}, {"t": 3705.0, "d": 7931.6, "hr": 113.0, "p": 190.0, "s": 1.68, "st": 73.0, "stp": 73.0, "e": 19.0, "c": 64.0}, {"t": 3717.0, "d": 7952.5, "hr": 110.0, "p": 169.0, "s": 1.708, "st": 73.0, "stp": 73.0, "e": 19.2, "c": 63.0}, {"t": 3729.0, "d": 7972.5, "hr": 110.0, "p": 160.0, "s": 1.68, "st": 73.0, "stp": 73.0, "e": 19.0, "c": 62.0}, {"t": 3741.0, "d": 7994.4, "hr": 111.0, "p": 162.0, "s": 1.698, "st": 72.0, "stp": 72.0, "e": 18.8, "c": 62.0}, {"t": 3753.0, "d": 8016.1, "hr": 111.0, "p": 165.0, "s": 1.717, "st": 72.0, "stp": 72.0, "e": 18.4, "c": 64.0}, {"t": 3765.0, "d": 8037.6, "hr": 110.0, "p": 163.0, "s": 1.736, "st": 72.0, "stp": 72.0, "e": 17.8, "c": 62.0}, {"t": 3777.0, "d": 8059.7, "hr": 111.0, "p": 172.0, "s": 1.745, "st": 72.0, "stp": 72.0, "e": 17.6, "c": 65.0}, {"t": 3789.0, "d": 8092.1, "hr": 113.0, "p": 304.0, "s": 2.258, "st": 72.0, "stp": 72.0, "e": 18.4, "c": 84.0}, {"t": 3801.0, "d": 8127.5, "hr": 123.0, "p": 375.0, "s": 2.753, "st": 72.0, "stp": 72.0, "e": 19.4, "c": 84.0}, {"t": 3813.0, "d": 8162.1, "hr": 131.0, "p": 355.0, "s": 2.715, "st": 72.0, "stp": 72.0, "e": 19.2, "c": 82.0}, {"t": 3825.0, "d": 8196.8, "hr": 135.0, "p": 324.0, "s": 2.818, "st": 72.0, "stp": 72.0, "e": 18.6, "c": 84.0}, {"t": 3837.0, "d": 8230.5, "hr": 137.0, "p": 322.0, "s": 2.827, "st": 72.0, "stp": 72.0, "e": 18.6, "c": 84.0}, {"t": 3849.0, "d": 8263.6, "hr": 137.0, "p": 324.0, "s": 2.846, "st": 72.0, "stp": 72.0, "e": 18.6, "c": 84.0}, {"t": 3861.0, "d": 8296.4, "hr": 137.0, "p": 324.0, "s": 2.809, "st": 71.0, "stp": 71.0, "e": 18.4, "c": 85.0}, {"t": 3872.0, "d": 8326.6, "hr": 133.0, "p": 332.0, "s": 2.809, "st": 71.0, "stp": 71.0, "e": 18.8, "c": 84.0}, {"t": 3882.0, "d": 8351.8, "hr": 133.0, "p": 329.0, "s": 2.781, "st": 71.0, "stp": 71.0, "e": 18.8, "c": 84.0}, {"t": 3894.0, "d": 8386.3, "hr": 135.0, "p": 366.0, "s": 2.79, "st": 71.0, "stp": 71.0, "e": 20.2, "c": 84.0}, {"t": 3906.0, "d": 8414.6, "hr": 138.0, "p": 313.0, "s": 2.79, "st": 71.0, "stp": 71.0, "e": 19.0, "c": 82.0}, {"t": 3918.0, "d": 8434.2, "hr": 136.0, "p": 162.0, "s": 1.987, "st": 71.0, "stp": 71.0, "e": 19.4, "c": 58.0}, {"t": 3930.0, "d": 8455.0, "hr": 130.0, "p": 151.0, "s": 1.838, "st": 71.0, "stp": 71.0, "e": 19.2, "c": 58.0}, {"t": 3942.0, "d": 8474.3, "hr": 120.0, "p": 144.0, "s": 1.782, "st": 71.0, "stp": 71.0, "e": 18.8, "c": 58.0}, {"t": 3954.0, "d": 8491.8, "hr": 117.0, "p": 139.0, "s": 1.698, "st": 71.0, "stp": 71.0, "e": 18.6, "c": 61.0}, {"t": 3966.0, "d": 8512.3, "hr": 111.0, "p": 144.0, "s": 1.689, "st": 71.0, "stp": 71.0, "e": 18.6, "c": 61.0}, {"t": 3978.0, "d": 8532.5, "hr": 107.0, "p": 159.0, "s": 1.661, "st": 71.0, "stp": 71.0, "e": 18.6, "c": 62.0}, {"t": 3990.0, "d": 8552.8, "hr": 107.0, "p": 142.0, "s": 1.652, "st": 71.0, "stp": 71.0, "e": 18.4, "c": 60.0}, {"t": 4002.0, "d": 8574.6, "hr": 106.0, "p": 177.0, "s": 1.652, "st": 71.0, "stp": 71.0, "e": 18.8, "c": 62.0}, {"t": 4014.0, "d": 8594.3, "hr": 108.0, "p": 164.0, "s": 1.661, "st": 70.0, "stp": 70.0, "e": 18.8, "c": 62.0}, {"t": 4026.0, "d": 8614.2, "hr": 107.0, "p": 143.0, "s": 1.633, "st": 70.0, "stp": 70.0, "e": 18.8, "c": 61.0}, {"t": 4038.0, "d": 8634.4, "hr": 109.0, "p": 141.0, "s": 1.633, "st": 70.0, "stp": 70.0, "e": 18.4, "c": 61.0}, {"t": 4050.0, "d": 8656.0, "hr": 107.0, "p": 137.0, "s": 1.642, "st": 70.0, "stp": 70.0, "e": 18.8, "c": 61.0}, {"t": 4062.0, "d": 8676.1, "hr": 106.0, "p": 142.0, "s": 1.67, "st": 70.0, "stp": 70.0, "e": 18.6, "c": 61.0}, {"t": 4074.0, "d": 8696.3, "hr": 106.0, "p": 157.0, "s": 1.661, "st": 70.0, "stp": 70.0, "e": 18.8, "c": 62.0}, {"t": 4086.0, "d": 8717.5, "hr": 105.0, "p": 141.0, "s": 1.661, "st": 70.0, "stp": 70.0, "e": 18.6, "c": 61.0}, {"t": 4098.0, "d": 8737.0, "hr": 104.0, "p": 147.0, "s": 1.67, "st": 70.0, "stp": 70.0, "e": 19.0, "c": 62.0}, {"t": 4110.0, "d": 8758.1, "hr": 104.0, "p": 156.0, "s": 1.67, "st": 70.0, "stp": 70.0, "e": 19.0, "c": 63.0}, {"t": 4122.0, "d": 8779.2, "hr": 108.0, "p": 151.0, "s": 1.68, "st": 70.0, "stp": 70.0, "e": 18.6, "c": 62.0}, {"t": 4134.0, "d": 8799.3, "hr": 108.0, "p": 143.0, "s": 1.68, "st": 70.0, "stp": 70.0, "e": 17.6, "c": 64.0}, {"t": 4146.0, "d": 8820.5, "hr": 104.0, "p": 113.0, "s": 1.698, "st": 70.0, "stp": 70.0, "e": 16.4, "c": 61.0}, {"t": 4158.0, "d": 8841.5, "hr": 101.0, "p": 134.0, "s": 1.717, "st": 70.0, "stp": 70.0, "e": 15.6, "c": 63.0}, {"t": 4170.0, "d": 8859.7, "hr": 99.0, "p": 126.0, "s": 1.68, "st": 70.0, "stp": 70.0, "e": 16.0, "c": 59.0}, {"t": 4182.0, "d": 8882.6, "hr": 101.0, "p": 147.0, "s": 1.727, "st": 70.0, "stp": 70.0, "e": 16.4, "c": 61.0}, {"t": 4194.0, "d": 8902.0, "hr": 101.0, "p": 193.0, "s": 1.708, "st": 70.0, "stp": 70.0, "e": 17.0, "c": 62.0}, {"t": 4206.0, "d": 8922.0, "hr": 104.0, "p": 200.0, "s": 1.671, "st": 70.0, "stp": 70.0, "e": 18.2, "c": 61.0}, {"t": 4218.0, "d": 8942.6, "hr": 112.0, "p": 188.0, "s": 1.671, "st": 70.0, "stp": 70.0, "e": 18.8, "c": 61.0}, {"t": 4230.0, "d": 8963.5, "hr": 113.0, "p": 150.0, "s": 1.671, "st": 70.0, "stp": 70.0, "e": 19.0, "c": 60.0}, {"t": 4242.0, "d": 8983.5, "hr": 111.0, "p": 128.0, "s": 1.68, "st": 70.0, "stp": 70.0, "e": 19.0, "c": 60.0}, {"t": 4254.0, "d": 9003.9, "hr": 109.0, "p": 130.0, "s": 1.68, "st": 70.0, "stp": 70.0, "e": 19.0, "c": 60.0}, {"t": 4266.0, "d": 9024.2, "hr": 102.0, "p": 130.0, "s": 1.689, "st": 70.0, "stp": 70.0, "e": 19.0, "c": 60.0}, {"t": 4278.0, "d": 9043.0, "hr": 102.0, "p": 145.0, "s": 1.642, "st": 70.0, "stp": 70.0, "e": 19.4, "c": 61.0}, {"t": 4290.0, "d": 9063.3, "hr": 103.0, "p": 144.0, "s": 1.633, "st": 70.0, "stp": 70.0, "e": 19.6, "c": 61.0}, {"t": 4302.0, "d": 9084.7, "hr": 103.0, "p": 164.0, "s": 1.652, "st": 69.0, "stp": 69.0, "e": 19.8, "c": 62.0}, {"t": 4314.0, "d": 9105.0, "hr": 103.0, "p": 147.0, "s": 1.661, "st": 69.0, "stp": 69.0, "e": 20.0, "c": 59.0}, {"t": 4326.0, "d": 9124.8, "hr": 104.0, "p": 156.0, "s": 1.661, "st": 69.0, "stp": 69.0, "e": 20.2, "c": 59.0}, {"t": 4338.0, "d": 9143.8, "hr": 104.0, "p": 141.0, "s": 1.661, "st": 69.0, "stp": 69.0, "e": 20.0, "c": 61.0}, {"t": 4350.0, "d": 9164.9, "hr": 106.0, "p": 134.0, "s": 1.661, "st": 69.0, "stp": 69.0, "e": 20.2, "c": 60.0}, {"t": 4362.0, "d": 9184.3, "hr": 104.0, "p": 146.0, "s": 1.67, "st": 69.0, "stp": 69.0, "e": 20.6, "c": 60.0}, {"t": 4374.0, "d": 9204.2, "hr": 103.0, "p": 145.0, "s": 1.661, "st": 69.0, "stp": 69.0, "e": 20.4, "c": 61.0}, {"t": 4386.0, "d": 9225.2, "hr": 103.0, "p": 141.0, "s": 1.68, "st": 69.0, "stp": 69.0, "e": 21.0, "c": 61.0}, {"t": 4398.0, "d": 9245.4, "hr": 106.0, "p": 163.0, "s": 1.689, "st": 69.0, "stp": 69.0, "e": 21.6, "c": 61.0}, {"t": 4410.0, "d": 9266.4, "hr": 108.0, "p": 159.0, "s": 1.689, "st": 69.0, "stp": 69.0, "e": 21.0, "c": 61.0}, {"t": 4422.0, "d": 9288.4, "hr": 106.0, "p": 137.0, "s": 1.726, "st": 69.0, "stp": 69.0, "e": 21.0, "c": 59.0}, {"t": 4434.0, "d": 9308.5, "hr": 104.0, "p": 136.0, "s": 1.717, "st": 69.0, "stp": 69.0, "e": 21.2, "c": 60.0}, {"t": 4446.0, "d": 9329.0, "hr": 103.0, "p": 132.0, "s": 1.717, "st": 69.0, "stp": 69.0, "e": 21.0, "c": 59.0}, {"t": 4458.0, "d": 9348.9, "hr": 103.0, "p": 136.0, "s": 1.717, "st": 69.0, "stp": 69.0, "e": 21.0, "c": 61.0}, {"t": 4470.0, "d": 9370.2, "hr": 104.0, "p": 150.0, "s": 1.708, "st": 69.0, "stp": 69.0, "e": 21.4, "c": 58.0}, {"t": 4482.0, "d": 9389.5, "hr": 104.0, "p": 160.0, "s": 1.698, "st": 69.0, "stp": 69.0, "e": 21.6, "c": 60.0}, {"t": 4494.0, "d": 9409.1, "hr": 103.0, "p": 171.0, "s": 1.68, "st": 69.0, "stp": 69.0, "e": 21.8, "c": 61.0}, {"t": 4506.0, "d": 9429.0, "hr": 104.0, "p": 152.0, "s": 1.68, "st": 69.0, "stp": 69.0, "e": 21.4, "c": 61.0}, {"t": 4518.0, "d": 9449.2, "hr": 106.0, "p": 164.0, "s": 1.661, "st": 69.0, "stp": 69.0, "e": 21.8, "c": 62.0}, {"t": 4530.0, "d": 9470.5, "hr": 107.0, "p": 160.0, "s": 1.689, "st": 69.0, "stp": 69.0, "e": 22.0, "c": 60.0}, {"t": 4542.0, "d": 9490.2, "hr": 105.0, "p": 146.0, "s": 1.698, "st": 69.0, "stp": 69.0, "e": 21.8, "c": 59.0}, {"t": 4554.0, "d": 9511.4, "hr": 104.0, "p": 146.0, "s": 1.689, "st": 69.0, "stp": 69.0, "e": 22.0, "c": 59.0}, {"t": 4566.0, "d": 9531.7, "hr": 106.0, "p": 140.0, "s": 1.717, "st": 69.0, "stp": 69.0, "e": 22.2, "c": 59.0}, {"t": 4575.0, "d": 9545.4, "hr": 105.0, "p": 139.0, "s": 1.689, "st": 68.0, "stp": 68.0, "e": 22.4, "c": 57.0}, {"t": 4587.0, "d": 9551.7, "hr": 101.0, "p": 0, "s": 1.232, "st": 68.0, "stp": 68.0, "e": 23.6, "c": 0}, {"t": 4599.0, "d": 9554.6, "hr": 101.0, "p": 0, "s": 0, "st": 68.0, "stp": 68.0, "e": 24.0, "c": 0}, {"t": 4608.0, "d": 9557.9, "hr": 102.0, "p": 0, "s": 0, "st": 68.0, "stp": 68.0, "e": 23.6, "c": 0}], "scatter_walk": [{"hr": 87.0, "p": 143.0, "pace": 8.92, "s": 1.868, "c": 55.0}, {"hr": 95.0, "p": 144.0, "pace": 8.49, "s": 1.962, "c": 58.0}, {"hr": 96.0, "p": 122.0, "pace": 9.6, "s": 1.736, "c": 59.0}, {"hr": 97.0, "p": 126.0, "pace": 9.76, "s": 1.708, "c": 58.0}, {"hr": 98.0, "p": 121.0, "pace": 10.09, "s": 1.652, "c": 59.0}, {"hr": 99.0, "p": 120.0, "pace": 10.26, "s": 1.624, "c": 59.0}, {"hr": 99.0, "p": 121.0, "pace": 10.26, "s": 1.624, "c": 59.0}, {"hr": 98.0, "p": 117.0, "pace": 10.63, "s": 1.568, "c": 59.0}, {"hr": 86.0, "p": 123.0, "pace": 10.51, "s": 1.586, "c": 59.0}, {"hr": 85.0, "p": 126.0, "pace": 9.98, "s": 1.67, "c": 60.0}, {"hr": 84.0, "p": 145.0, "pace": 9.87, "s": 1.689, "c": 63.0}, {"hr": 96.0, "p": 150.0, "pace": 9.66, "s": 1.726, "c": 64.0}, {"hr": 121.0, "p": 166.0, "pace": 8.8, "s": 1.894, "c": 63.0}, {"hr": 121.0, "p": 137.0, "pace": 9.16, "s": 1.82, "c": 60.0}, {"hr": 118.0, "p": 140.0, "pace": 9.3, "s": 1.792, "c": 61.0}, {"hr": 113.0, "p": 137.0, "pace": 9.4, "s": 1.773, "c": 59.0}, {"hr": 109.0, "p": 140.0, "pace": 9.98, "s": 1.67, "c": 60.0}, {"hr": 107.0, "p": 144.0, "pace": 9.55, "s": 1.745, "c": 60.0}, {"hr": 107.0, "p": 140.0, "pace": 9.31, "s": 1.791, "c": 58.0}, {"hr": 103.0, "p": 136.0, "pace": 9.31, "s": 1.791, "c": 58.0}, {"hr": 102.0, "p": 133.0, "pace": 9.55, "s": 1.745, "c": 59.0}, {"hr": 101.0, "p": 130.0, "pace": 9.71, "s": 1.717, "c": 58.0}, {"hr": 98.0, "p": 134.0, "pace": 9.82, "s": 1.698, "c": 60.0}, {"hr": 99.0, "p": 143.0, "pace": 9.71, "s": 1.717, "c": 60.0}, {"hr": 101.0, "p": 140.0, "pace": 9.71, "s": 1.717, "c": 59.0}, {"hr": 102.0, "p": 140.0, "pace": 9.87, "s": 1.689, "c": 60.0}, {"hr": 101.0, "p": 138.0, "pace": 9.92, "s": 1.68, "c": 59.0}, {"hr": 100.0, "p": 155.0, "pace": 9.82, "s": 1.698, "c": 61.0}, {"hr": 101.0, "p": 148.0, "pace": 9.82, "s": 1.698, "c": 61.0}, {"hr": 101.0, "p": 157.0, "pace": 9.87, "s": 1.689, "c": 62.0}, {"hr": 99.0, "p": 131.0, "pace": 9.82, "s": 1.698, "c": 61.0}, {"hr": 95.0, "p": 119.0, "pace": 9.76, "s": 1.708, "c": 61.0}, {"hr": 95.0, "p": 133.0, "pace": 9.76, "s": 1.708, "c": 62.0}, {"hr": 93.0, "p": 130.0, "pace": 9.86, "s": 1.691, "c": 60.0}, {"hr": 93.0, "p": 147.0, "pace": 9.75, "s": 1.71, "c": 61.0}, {"hr": 95.0, "p": 162.0, "pace": 9.2, "s": 1.812, "c": 61.0}, {"hr": 98.0, "p": 167.0, "pace": 9.91, "s": 1.682, "c": 60.0}, {"hr": 101.0, "p": 202.0, "pace": 9.87, "s": 1.689, "c": 60.0}, {"hr": 107.0, "p": 226.0, "pace": 10.21, "s": 1.633, "c": 62.0}, {"hr": 110.0, "p": 182.0, "pace": 10.09, "s": 1.652, "c": 60.0}, {"hr": 112.0, "p": 150.0, "pace": 10.08, "s": 1.653, "c": 60.0}, {"hr": 112.0, "p": 139.0, "pace": 10.08, "s": 1.653, "c": 60.0}, {"hr": 111.0, "p": 150.0, "pace": 10.08, "s": 1.653, "c": 62.0}, {"hr": 113.0, "p": 138.0, "pace": 10.03, "s": 1.662, "c": 61.0}, {"hr": 109.0, "p": 132.0, "pace": 9.87, "s": 1.689, "c": 59.0}, {"hr": 107.0, "p": 140.0, "pace": 9.71, "s": 1.717, "c": 61.0}, {"hr": 105.0, "p": 140.0, "pace": 9.66, "s": 1.726, "c": 61.0}, {"hr": 102.0, "p": 136.0, "pace": 9.66, "s": 1.726, "c": 60.0}, {"hr": 102.0, "p": 138.0, "pace": 9.66, "s": 1.726, "c": 61.0}, {"hr": 103.0, "p": 138.0, "pace": 9.71, "s": 1.717, "c": 60.0}, {"hr": 100.0, "p": 141.0, "pace": 9.66, "s": 1.726, "c": 60.0}, {"hr": 99.0, "p": 164.0, "pace": 9.6, "s": 1.736, "c": 61.0}, {"hr": 101.0, "p": 147.0, "pace": 9.6, "s": 1.736, "c": 59.0}, {"hr": 98.0, "p": 140.0, "pace": 9.6, "s": 1.736, "c": 59.0}, {"hr": 99.0, "p": 139.0, "pace": 9.76, "s": 1.708, "c": 60.0}, {"hr": 137.0, "p": 139.0, "pace": 9.92, "s": 1.68, "c": 56.0}, {"hr": 123.0, "p": 162.0, "pace": 8.55, "s": 1.95, "c": 57.0}, {"hr": 120.0, "p": 144.0, "pace": 9.07, "s": 1.838, "c": 57.0}, {"hr": 119.0, "p": 140.0, "pace": 9.66, "s": 1.726, "c": 58.0}, {"hr": 113.0, "p": 144.0, "pace": 9.55, "s": 1.745, "c": 57.0}, {"hr": 106.0, "p": 153.0, "pace": 9.35, "s": 1.782, "c": 58.0}, {"hr": 103.0, "p": 231.0, "pace": 9.25, "s": 1.801, "c": 81.0}, {"hr": 133.0, "p": 161.0, "pace": 8.89, "s": 1.875, "c": 57.0}, {"hr": 132.0, "p": 142.0, "pace": 9.71, "s": 1.717, "c": 58.0}, {"hr": 122.0, "p": 151.0, "pace": 9.5, "s": 1.754, "c": 57.0}, {"hr": 118.0, "p": 159.0, "pace": 9.6, "s": 1.736, "c": 57.0}, {"hr": 117.0, "p": 163.0, "pace": 10.44, "s": 1.596, "c": 57.0}, {"hr": 111.0, "p": 163.0, "pace": 10.26, "s": 1.624, "c": 58.0}, {"hr": 106.0, "p": 139.0, "pace": 10.38, "s": 1.605, "c": 58.0}, {"hr": 103.0, "p": 67.0, "pace": 10.21, "s": 1.633, "c": 82.0}, {"hr": 133.0, "p": 167.0, "pace": 8.55, "s": 1.95, "c": 59.0}, {"hr": 128.0, "p": 159.0, "pace": 8.84, "s": 1.885, "c": 59.0}, {"hr": 122.0, "p": 148.0, "pace": 9.45, "s": 1.764, "c": 59.0}, {"hr": 121.0, "p": 148.0, "pace": 9.4, "s": 1.773, "c": 59.0}, {"hr": 114.0, "p": 148.0, "pace": 9.66, "s": 1.726, "c": 59.0}, {"hr": 110.0, "p": 142.0, "pace": 9.82, "s": 1.698, "c": 59.0}, {"hr": 107.0, "p": 140.0, "pace": 9.87, "s": 1.689, "c": 59.0}, {"hr": 106.0, "p": 300.0, "pace": 8.46, "s": 1.969, "c": 81.0}, {"hr": 135.0, "p": 169.0, "pace": 8.67, "s": 1.922, "c": 59.0}, {"hr": 132.0, "p": 160.0, "pace": 8.76, "s": 1.903, "c": 59.0}, {"hr": 125.0, "p": 155.0, "pace": 9.25, "s": 1.801, "c": 59.0}, {"hr": 121.0, "p": 158.0, "pace": 9.45, "s": 1.764, "c": 59.0}, {"hr": 116.0, "p": 149.0, "pace": 9.82, "s": 1.698, "c": 59.0}, {"hr": 112.0, "p": 143.0, "pace": 9.87, "s": 1.689, "c": 60.0}, {"hr": 112.0, "p": 142.0, "pace": 10.03, "s": 1.661, "c": 60.0}, {"hr": 111.0, "p": 141.0, "pace": 10.15, "s": 1.642, "c": 59.0}, {"hr": 109.0, "p": 139.0, "pace": 10.26, "s": 1.624, "c": 58.0}, {"hr": 108.0, "p": 66.0, "pace": 10.33, "s": 1.614, "c": 0}, {"hr": 131.0, "p": 152.0, "pace": 8.51, "s": 1.959, "c": 60.0}, {"hr": 128.0, "p": 144.0, "pace": 8.98, "s": 1.857, "c": 60.0}, {"hr": 123.0, "p": 142.0, "pace": 9.07, "s": 1.838, "c": 60.0}, {"hr": 118.0, "p": 138.0, "pace": 9.4, "s": 1.773, "c": 60.0}, {"hr": 111.0, "p": 136.0, "pace": 9.66, "s": 1.726, "c": 60.0}, {"hr": 111.0, "p": 131.0, "pace": 9.76, "s": 1.708, "c": 58.0}, {"hr": 108.0, "p": 132.0, "pace": 9.98, "s": 1.67, "c": 59.0}, {"hr": 107.0, "p": 211.0, "pace": 9.87, "s": 1.689, "c": 80.0}, {"hr": 130.0, "p": 136.0, "pace": 9.45, "s": 1.764, "c": 61.0}, {"hr": 117.0, "p": 138.0, "pace": 9.6, "s": 1.736, "c": 60.0}, {"hr": 116.0, "p": 136.0, "pace": 9.71, "s": 1.717, "c": 61.0}, {"hr": 114.0, "p": 155.0, "pace": 9.82, "s": 1.698, "c": 62.0}, {"hr": 113.0, "p": 141.0, "pace": 10.03, "s": 1.661, "c": 61.0}, {"hr": 109.0, "p": 142.0, "pace": 10.03, "s": 1.661, "c": 61.0}, {"hr": 108.0, "p": 153.0, "pace": 10.09, "s": 1.652, "c": 61.0}, {"hr": 129.0, "p": 138.0, "pace": 11.83, "s": 1.409, "c": 58.0}, {"hr": 126.0, "p": 137.0, "pace": 8.55, "s": 1.95, "c": 58.0}, {"hr": 124.0, "p": 139.0, "pace": 9.02, "s": 1.848, "c": 59.0}, {"hr": 125.0, "p": 133.0, "pace": 9.5, "s": 1.754, "c": 58.0}, {"hr": 115.0, "p": 133.0, "pace": 9.66, "s": 1.726, "c": 60.0}, {"hr": 109.0, "p": 128.0, "pace": 9.87, "s": 1.689, "c": 59.0}, {"hr": 106.0, "p": 128.0, "pace": 9.98, "s": 1.67, "c": 59.0}, {"hr": 130.0, "p": 184.0, "pace": 8.51, "s": 1.959, "c": 63.0}, {"hr": 128.0, "p": 153.0, "pace": 8.84, "s": 1.885, "c": 61.0}, {"hr": 124.0, "p": 145.0, "pace": 9.45, "s": 1.764, "c": 61.0}, {"hr": 120.0, "p": 138.0, "pace": 9.66, "s": 1.726, "c": 61.0}, {"hr": 111.0, "p": 148.0, "pace": 9.76, "s": 1.708, "c": 62.0}, {"hr": 109.0, "p": 128.0, "pace": 10.03, "s": 1.661, "c": 61.0}, {"hr": 108.0, "p": 192.0, "pace": 9.82, "s": 1.698, "c": 81.0}, {"hr": 127.0, "p": 141.0, "pace": 8.71, "s": 1.913, "c": 60.0}, {"hr": 126.0, "p": 148.0, "pace": 9.11, "s": 1.829, "c": 61.0}, {"hr": 123.0, "p": 156.0, "pace": 9.25, "s": 1.801, "c": 62.0}, {"hr": 120.0, "p": 155.0, "pace": 9.6, "s": 1.736, "c": 62.0}, {"hr": 113.0, "p": 135.0, "pace": 9.76, "s": 1.708, "c": 61.0}, {"hr": 108.0, "p": 155.0, "pace": 9.71, "s": 1.717, "c": 62.0}, {"hr": 104.0, "p": 140.0, "pace": 9.76, "s": 1.708, "c": 61.0}, {"hr": 130.0, "p": 177.0, "pace": 8.71, "s": 1.913, "c": 62.0}, {"hr": 127.0, "p": 159.0, "pace": 8.98, "s": 1.857, "c": 62.0}, {"hr": 128.0, "p": 137.0, "pace": 9.07, "s": 1.838, "c": 61.0}, {"hr": 124.0, "p": 132.0, "pace": 9.35, "s": 1.782, "c": 60.0}, {"hr": 120.0, "p": 140.0, "pace": 9.5, "s": 1.754, "c": 60.0}, {"hr": 114.0, "p": 147.0, "pace": 9.55, "s": 1.745, "c": 60.0}, {"hr": 109.0, "p": 145.0, "pace": 9.6, "s": 1.736, "c": 60.0}, {"hr": 108.0, "p": 136.0, "pace": 9.71, "s": 1.717, "c": 59.0}, {"hr": 124.0, "p": 137.0, "pace": 9.11, "s": 1.829, "c": 60.0}, {"hr": 124.0, "p": 136.0, "pace": 9.07, "s": 1.838, "c": 61.0}, {"hr": 123.0, "p": 172.0, "pace": 8.98, "s": 1.857, "c": 66.0}, {"hr": 121.0, "p": 177.0, "pace": 8.67, "s": 1.922, "c": 67.0}, {"hr": 119.0, "p": 177.0, "pace": 8.76, "s": 1.903, "c": 67.0}, {"hr": 116.0, "p": 177.0, "pace": 8.84, "s": 1.885, "c": 67.0}, {"hr": 117.0, "p": 173.0, "pace": 8.89, "s": 1.875, "c": 66.0}, {"hr": 118.0, "p": 174.0, "pace": 8.84, "s": 1.885, "c": 65.0}, {"hr": 117.0, "p": 175.0, "pace": 8.93, "s": 1.866, "c": 65.0}, {"hr": 117.0, "p": 178.0, "pace": 9.02, "s": 1.847, "c": 67.0}, {"hr": 116.0, "p": 174.0, "pace": 9.11, "s": 1.829, "c": 65.0}, {"hr": 115.0, "p": 179.0, "pace": 9.11, "s": 1.829, "c": 66.0}, {"hr": 114.0, "p": 178.0, "pace": 9.16, "s": 1.819, "c": 64.0}, {"hr": 116.0, "p": 179.0, "pace": 9.21, "s": 1.81, "c": 65.0}, {"hr": 116.0, "p": 177.0, "pace": 9.31, "s": 1.791, "c": 65.0}, {"hr": 116.0, "p": 169.0, "pace": 9.35, "s": 1.782, "c": 64.0}, {"hr": 115.0, "p": 164.0, "pace": 9.4, "s": 1.773, "c": 65.0}, {"hr": 114.0, "p": 160.0, "pace": 9.4, "s": 1.773, "c": 65.0}, {"hr": 114.0, "p": 159.0, "pace": 9.4, "s": 1.773, "c": 64.0}, {"hr": 110.0, "p": 162.0, "pace": 9.4, "s": 1.773, "c": 64.0}, {"hr": 105.0, "p": 154.0, "pace": 9.5, "s": 1.754, "c": 63.0}, {"hr": 139.0, "p": 188.0, "pace": 8.5, "s": 1.96, "c": 66.0}, {"hr": 137.0, "p": 188.0, "pace": 8.51, "s": 1.959, "c": 66.0}, {"hr": 132.0, "p": 189.0, "pace": 8.67, "s": 1.922, "c": 68.0}, {"hr": 126.0, "p": 179.0, "pace": 8.93, "s": 1.866, "c": 66.0}, {"hr": 123.0, "p": 177.0, "pace": 9.07, "s": 1.838, "c": 65.0}, {"hr": 122.0, "p": 181.0, "pace": 9.25, "s": 1.801, "c": 66.0}, {"hr": 122.0, "p": 173.0, "pace": 9.25, "s": 1.801, "c": 65.0}, {"hr": 120.0, "p": 172.0, "pace": 9.25, "s": 1.801, "c": 65.0}, {"hr": 118.0, "p": 172.0, "pace": 9.21, "s": 1.81, "c": 63.0}, {"hr": 117.0, "p": 168.0, "pace": 9.35, "s": 1.782, "c": 64.0}, {"hr": 117.0, "p": 164.0, "pace": 9.4, "s": 1.773, "c": 64.0}, {"hr": 115.0, "p": 163.0, "pace": 9.5, "s": 1.754, "c": 64.0}, {"hr": 113.0, "p": 173.0, "pace": 9.5, "s": 1.754, "c": 64.0}, {"hr": 113.0, "p": 180.0, "pace": 9.45, "s": 1.764, "c": 64.0}, {"hr": 111.0, "p": 170.0, "pace": 9.55, "s": 1.745, "c": 65.0}, {"hr": 111.0, "p": 157.0, "pace": 9.66, "s": 1.726, "c": 64.0}, {"hr": 111.0, "p": 158.0, "pace": 9.6, "s": 1.736, "c": 64.0}, {"hr": 112.0, "p": 161.0, "pace": 9.55, "s": 1.745, "c": 65.0}, {"hr": 142.0, "p": 144.0, "pace": 10.26, "s": 1.624, "c": 63.0}, {"hr": 120.0, "p": 207.0, "pace": 8.46, "s": 1.969, "c": 65.0}, {"hr": 118.0, "p": 216.0, "pace": 8.98, "s": 1.857, "c": 61.0}, {"hr": 119.0, "p": 219.0, "pace": 9.4, "s": 1.773, "c": 61.0}, {"hr": 119.0, "p": 189.0, "pace": 9.97, "s": 1.671, "c": 61.0}, {"hr": 122.0, "p": 159.0, "pace": 9.81, "s": 1.699, "c": 62.0}, {"hr": 122.0, "p": 145.0, "pace": 9.97, "s": 1.671, "c": 62.0}, {"hr": 120.0, "p": 161.0, "pace": 9.86, "s": 1.69, "c": 66.0}, {"hr": 117.0, "p": 175.0, "pace": 9.4, "s": 1.773, "c": 66.0}, {"hr": 114.0, "p": 170.0, "pace": 9.5, "s": 1.754, "c": 65.0}, {"hr": 114.0, "p": 169.0, "pace": 9.66, "s": 1.726, "c": 65.0}, {"hr": 113.0, "p": 173.0, "pace": 9.55, "s": 1.745, "c": 66.0}, {"hr": 115.0, "p": 173.0, "pace": 9.45, "s": 1.764, "c": 66.0}, {"hr": 116.0, "p": 172.0, "pace": 9.4, "s": 1.773, "c": 66.0}, {"hr": 117.0, "p": 168.0, "pace": 9.4, "s": 1.773, "c": 65.0}, {"hr": 118.0, "p": 209.0, "pace": 9.16, "s": 1.819, "c": 83.0}, {"hr": 127.0, "p": 160.0, "pace": 8.88, "s": 1.876, "c": 63.0}, {"hr": 122.0, "p": 165.0, "pace": 9.07, "s": 1.838, "c": 62.0}, {"hr": 122.0, "p": 159.0, "pace": 9.5, "s": 1.754, "c": 64.0}, {"hr": 120.0, "p": 190.0, "pace": 8.89, "s": 1.875, "c": 64.0}, {"hr": 119.0, "p": 177.0, "pace": 9.07, "s": 1.838, "c": 64.0}, {"hr": 117.0, "p": 181.0, "pace": 9.21, "s": 1.81, "c": 64.0}, {"hr": 117.0, "p": 194.0, "pace": 9.35, "s": 1.782, "c": 65.0}, {"hr": 116.0, "p": 191.0, "pace": 9.45, "s": 1.764, "c": 64.0}, {"hr": 115.0, "p": 198.0, "pace": 9.45, "s": 1.764, "c": 64.0}, {"hr": 117.0, "p": 191.0, "pace": 9.66, "s": 1.726, "c": 63.0}, {"hr": 115.0, "p": 169.0, "pace": 9.76, "s": 1.708, "c": 63.0}, {"hr": 113.0, "p": 169.0, "pace": 9.6, "s": 1.736, "c": 64.0}, {"hr": 112.0, "p": 168.0, "pace": 9.71, "s": 1.717, "c": 64.0}, {"hr": 113.0, "p": 171.0, "pace": 9.71, "s": 1.717, "c": 64.0}, {"hr": 116.0, "p": 179.0, "pace": 9.66, "s": 1.726, "c": 65.0}, {"hr": 115.0, "p": 191.0, "pace": 9.66, "s": 1.726, "c": 65.0}, {"hr": 116.0, "p": 189.0, "pace": 9.66, "s": 1.726, "c": 64.0}, {"hr": 127.0, "p": 178.0, "pace": 8.43, "s": 1.978, "c": 61.0}, {"hr": 126.0, "p": 169.0, "pace": 9.07, "s": 1.838, "c": 62.0}, {"hr": 122.0, "p": 171.0, "pace": 9.25, "s": 1.801, "c": 62.0}, {"hr": 118.0, "p": 160.0, "pace": 9.71, "s": 1.717, "c": 62.0}, {"hr": 114.0, "p": 156.0, "pace": 9.87, "s": 1.689, "c": 63.0}, {"hr": 114.0, "p": 150.0, "pace": 10.26, "s": 1.624, "c": 62.0}, {"hr": 112.0, "p": 170.0, "pace": 9.87, "s": 1.689, "c": 65.0}, {"hr": 111.0, "p": 179.0, "pace": 9.55, "s": 1.745, "c": 63.0}, {"hr": 113.0, "p": 181.0, "pace": 9.82, "s": 1.698, "c": 64.0}, {"hr": 113.0, "p": 190.0, "pace": 9.92, "s": 1.68, "c": 64.0}, {"hr": 111.0, "p": 176.0, "pace": 9.82, "s": 1.698, "c": 63.0}, {"hr": 111.0, "p": 164.0, "pace": 9.82, "s": 1.698, "c": 63.0}, {"hr": 111.0, "p": 162.0, "pace": 9.92, "s": 1.68, "c": 62.0}, {"hr": 111.0, "p": 162.0, "pace": 9.82, "s": 1.698, "c": 62.0}, {"hr": 111.0, "p": 164.0, "pace": 9.76, "s": 1.708, "c": 63.0}, {"hr": 111.0, "p": 166.0, "pace": 9.76, "s": 1.708, "c": 64.0}, {"hr": 111.0, "p": 161.0, "pace": 9.6, "s": 1.736, "c": 63.0}, {"hr": 111.0, "p": 172.0, "pace": 9.55, "s": 1.745, "c": 65.0}, {"hr": 113.0, "p": 271.0, "pace": 8.89, "s": 1.875, "c": 84.0}, {"hr": 135.0, "p": 163.0, "pace": 8.71, "s": 1.913, "c": 60.0}, {"hr": 130.0, "p": 151.0, "pace": 9.07, "s": 1.838, "c": 58.0}, {"hr": 121.0, "p": 148.0, "pace": 9.3, "s": 1.792, "c": 59.0}, {"hr": 119.0, "p": 141.0, "pace": 9.5, "s": 1.754, "c": 59.0}, {"hr": 117.0, "p": 140.0, "pace": 9.87, "s": 1.689, "c": 61.0}, {"hr": 111.0, "p": 144.0, "pace": 9.87, "s": 1.689, "c": 61.0}, {"hr": 108.0, "p": 144.0, "pace": 10.03, "s": 1.661, "c": 61.0}, {"hr": 107.0, "p": 145.0, "pace": 10.09, "s": 1.652, "c": 61.0}, {"hr": 106.0, "p": 145.0, "pace": 10.09, "s": 1.652, "c": 61.0}, {"hr": 106.0, "p": 177.0, "pace": 10.09, "s": 1.652, "c": 62.0}, {"hr": 107.0, "p": 167.0, "pace": 9.98, "s": 1.67, "c": 61.0}, {"hr": 107.0, "p": 142.0, "pace": 10.15, "s": 1.642, "c": 60.0}, {"hr": 108.0, "p": 143.0, "pace": 10.21, "s": 1.633, "c": 61.0}, {"hr": 109.0, "p": 141.0, "pace": 10.21, "s": 1.633, "c": 61.0}, {"hr": 104.0, "p": 133.0, "pace": 10.21, "s": 1.633, "c": 61.0}, {"hr": 106.0, "p": 144.0, "pace": 9.92, "s": 1.68, "c": 61.0}, {"hr": 106.0, "p": 144.0, "pace": 9.98, "s": 1.67, "c": 61.0}, {"hr": 106.0, "p": 157.0, "pace": 10.03, "s": 1.661, "c": 62.0}, {"hr": 105.0, "p": 144.0, "pace": 10.03, "s": 1.661, "c": 61.0}, {"hr": 105.0, "p": 137.0, "pace": 9.98, "s": 1.67, "c": 61.0}, {"hr": 104.0, "p": 150.0, "pace": 9.98, "s": 1.67, "c": 63.0}, {"hr": 104.0, "p": 156.0, "pace": 9.98, "s": 1.67, "c": 63.0}, {"hr": 106.0, "p": 151.0, "pace": 9.92, "s": 1.68, "c": 62.0}, {"hr": 108.0, "p": 150.0, "pace": 9.87, "s": 1.689, "c": 64.0}, {"hr": 107.0, "p": 141.0, "pace": 9.87, "s": 1.689, "c": 64.0}, {"hr": 104.0, "p": 113.0, "pace": 9.82, "s": 1.698, "c": 61.0}, {"hr": 102.0, "p": 131.0, "pace": 9.82, "s": 1.698, "c": 62.0}, {"hr": 99.0, "p": 120.0, "pace": 9.76, "s": 1.708, "c": 59.0}, {"hr": 100.0, "p": 131.0, "pace": 9.92, "s": 1.68, "c": 59.0}, {"hr": 101.0, "p": 147.0, "pace": 9.65, "s": 1.727, "c": 61.0}, {"hr": 101.0, "p": 174.0, "pace": 9.7, "s": 1.718, "c": 62.0}, {"hr": 102.0, "p": 188.0, "pace": 9.81, "s": 1.699, "c": 59.0}, {"hr": 107.0, "p": 201.0, "pace": 9.97, "s": 1.671, "c": 61.0}, {"hr": 112.0, "p": 188.0, "pace": 9.97, "s": 1.671, "c": 61.0}, {"hr": 114.0, "p": 153.0, "pace": 9.97, "s": 1.671, "c": 58.0}, {"hr": 114.0, "p": 147.0, "pace": 9.92, "s": 1.68, "c": 62.0}, {"hr": 111.0, "p": 129.0, "pace": 9.92, "s": 1.68, "c": 60.0}, {"hr": 109.0, "p": 130.0, "pace": 9.92, "s": 1.68, "c": 60.0}, {"hr": 105.0, "p": 132.0, "pace": 9.87, "s": 1.689, "c": 61.0}, {"hr": 102.0, "p": 135.0, "pace": 10.03, "s": 1.661, "c": 61.0}, {"hr": 102.0, "p": 144.0, "pace": 10.15, "s": 1.642, "c": 60.0}, {"hr": 103.0, "p": 144.0, "pace": 10.21, "s": 1.633, "c": 61.0}, {"hr": 103.0, "p": 159.0, "pace": 10.15, "s": 1.642, "c": 61.0}, {"hr": 102.0, "p": 145.0, "pace": 10.03, "s": 1.661, "c": 60.0}, {"hr": 104.0, "p": 155.0, "pace": 9.98, "s": 1.67, "c": 61.0}, {"hr": 104.0, "p": 156.0, "pace": 10.03, "s": 1.661, "c": 59.0}, {"hr": 104.0, "p": 148.0, "pace": 10.03, "s": 1.661, "c": 61.0}, {"hr": 104.0, "p": 136.0, "pace": 10.09, "s": 1.652, "c": 61.0}, {"hr": 106.0, "p": 134.0, "pace": 9.92, "s": 1.68, "c": 60.0}, {"hr": 104.0, "p": 146.0, "pace": 9.98, "s": 1.67, "c": 60.0}, {"hr": 103.0, "p": 146.0, "pace": 10.03, "s": 1.661, "c": 60.0}, {"hr": 103.0, "p": 141.0, "pace": 9.98, "s": 1.67, "c": 61.0}, {"hr": 104.0, "p": 145.0, "pace": 9.92, "s": 1.68, "c": 60.0}, {"hr": 106.0, "p": 163.0, "pace": 9.87, "s": 1.689, "c": 61.0}, {"hr": 107.0, "p": 147.0, "pace": 9.87, "s": 1.689, "c": 60.0}, {"hr": 110.0, "p": 143.0, "pace": 9.76, "s": 1.708, "c": 61.0}, {"hr": 105.0, "p": 138.0, "pace": 9.66, "s": 1.726, "c": 60.0}, {"hr": 104.0, "p": 136.0, "pace": 9.71, "s": 1.717, "c": 60.0}, {"hr": 103.0, "p": 135.0, "pace": 9.66, "s": 1.726, "c": 59.0}, {"hr": 103.0, "p": 132.0, "pace": 9.71, "s": 1.717, "c": 60.0}, {"hr": 103.0, "p": 140.0, "pace": 9.76, "s": 1.708, "c": 60.0}, {"hr": 104.0, "p": 150.0, "pace": 9.76, "s": 1.708, "c": 58.0}, {"hr": 105.0, "p": 159.0, "pace": 9.82, "s": 1.698, "c": 60.0}, {"hr": 103.0, "p": 167.0, "pace": 9.87, "s": 1.689, "c": 61.0}, {"hr": 103.0, "p": 164.0, "pace": 9.92, "s": 1.68, "c": 60.0}, {"hr": 104.0, "p": 152.0, "pace": 9.92, "s": 1.68, "c": 61.0}, {"hr": 107.0, "p": 146.0, "pace": 10.03, "s": 1.661, "c": 61.0}, {"hr": 106.0, "p": 158.0, "pace": 9.92, "s": 1.68, "c": 60.0}, {"hr": 106.0, "p": 159.0, "pace": 9.87, "s": 1.689, "c": 59.0}, {"hr": 105.0, "p": 146.0, "pace": 9.82, "s": 1.698, "c": 59.0}, {"hr": 104.0, "p": 156.0, "pace": 9.87, "s": 1.689, "c": 60.0}, {"hr": 105.0, "p": 142.0, "pace": 9.71, "s": 1.717, "c": 60.0}, {"hr": 106.0, "p": 133.0, "pace": 9.76, "s": 1.708, "c": 58.0}, {"hr": 105.0, "p": 139.0, "pace": 9.87, "s": 1.689, "c": 57.0}], "scatter_run": [{"hr": 84.0, "p": 148.0, "pace": 6.92, "s": 2.409, "c": 56.0}, {"hr": 93.0, "p": 163.0, "pace": 7.63, "s": 2.185, "c": 57.0}, {"hr": 102.0, "p": 221.0, "pace": 8.12, "s": 2.053, "c": 78.0}, {"hr": 107.0, "p": 238.0, "pace": 7.57, "s": 2.202, "c": 78.0}, {"hr": 112.0, "p": 258.0, "pace": 7.47, "s": 2.23, "c": 78.0}, {"hr": 116.0, "p": 266.0, "pace": 7.73, "s": 2.155, "c": 78.0}, {"hr": 121.0, "p": 251.0, "pace": 7.35, "s": 2.267, "c": 80.0}, {"hr": 122.0, "p": 253.0, "pace": 7.03, "s": 2.37, "c": 79.0}, {"hr": 122.0, "p": 237.0, "pace": 7.2, "s": 2.314, "c": 77.0}, {"hr": 122.0, "p": 227.0, "pace": 7.32, "s": 2.277, "c": 77.0}, {"hr": 104.0, "p": 324.0, "pace": 6.77, "s": 2.463, "c": 81.0}, {"hr": 110.0, "p": 365.0, "pace": 6.1, "s": 2.734, "c": 80.0}, {"hr": 122.0, "p": 318.0, "pace": 5.82, "s": 2.865, "c": 81.0}, {"hr": 127.0, "p": 337.0, "pace": 5.56, "s": 2.995, "c": 81.0}, {"hr": 131.0, "p": 351.0, "pace": 5.5, "s": 3.032, "c": 83.0}, {"hr": 131.0, "p": 359.0, "pace": 5.36, "s": 3.107, "c": 84.0}, {"hr": 134.0, "p": 335.0, "pace": 5.32, "s": 3.135, "c": 84.0}, {"hr": 137.0, "p": 200.0, "pace": 5.63, "s": 2.958, "c": 58.0}, {"hr": 133.0, "p": 175.0, "pace": 8.27, "s": 2.015, "c": 56.0}, {"hr": 130.0, "p": 166.0, "pace": 8.23, "s": 2.025, "c": 57.0}, {"hr": 117.0, "p": 312.0, "pace": 6.64, "s": 2.51, "c": 81.0}, {"hr": 122.0, "p": 340.0, "pace": 6.05, "s": 2.753, "c": 81.0}, {"hr": 127.0, "p": 342.0, "pace": 5.91, "s": 2.818, "c": 82.0}, {"hr": 131.0, "p": 338.0, "pace": 5.9, "s": 2.827, "c": 82.0}, {"hr": 134.0, "p": 339.0, "pace": 5.73, "s": 2.911, "c": 83.0}, {"hr": 135.0, "p": 177.0, "pace": 7.26, "s": 2.295, "c": 57.0}, {"hr": 103.0, "p": 324.0, "pace": 6.29, "s": 2.65, "c": 82.0}, {"hr": 106.0, "p": 327.0, "pace": 6.1, "s": 2.734, "c": 81.0}, {"hr": 124.0, "p": 317.0, "pace": 6.03, "s": 2.762, "c": 83.0}, {"hr": 130.0, "p": 344.0, "pace": 5.65, "s": 2.949, "c": 83.0}, {"hr": 135.0, "p": 356.0, "pace": 5.71, "s": 2.921, "c": 83.0}, {"hr": 138.0, "p": 250.0, "pace": 5.78, "s": 2.883, "c": 56.0}, {"hr": 133.0, "p": 178.0, "pace": 8.23, "s": 2.025, "c": 58.0}, {"hr": 114.0, "p": 404.0, "pace": 5.12, "s": 3.256, "c": 82.0}, {"hr": 117.0, "p": 296.0, "pace": 6.45, "s": 2.585, "c": 82.0}, {"hr": 123.0, "p": 302.0, "pace": 6.36, "s": 2.622, "c": 82.0}, {"hr": 129.0, "p": 299.0, "pace": 6.24, "s": 2.669, "c": 81.0}, {"hr": 131.0, "p": 320.0, "pace": 6.01, "s": 2.771, "c": 82.0}, {"hr": 137.0, "p": 306.0, "pace": 6.14, "s": 2.715, "c": 81.0}, {"hr": 137.0, "p": 308.0, "pace": 6.2, "s": 2.687, "c": 81.0}, {"hr": 138.0, "p": 208.0, "pace": 6.5, "s": 2.566, "c": 59.0}, {"hr": 115.0, "p": 280.0, "pace": 6.98, "s": 2.389, "c": 81.0}, {"hr": 117.0, "p": 304.0, "pace": 6.72, "s": 2.482, "c": 80.0}, {"hr": 119.0, "p": 268.0, "pace": 7.26, "s": 2.295, "c": 81.0}, {"hr": 124.0, "p": 254.0, "pace": 7.06, "s": 2.361, "c": 81.0}, {"hr": 126.0, "p": 260.0, "pace": 6.87, "s": 2.426, "c": 80.0}, {"hr": 127.0, "p": 268.0, "pace": 6.62, "s": 2.519, "c": 81.0}, {"hr": 129.0, "p": 268.0, "pace": 6.54, "s": 2.547, "c": 81.0}, {"hr": 132.0, "p": 277.0, "pace": 6.45, "s": 2.585, "c": 81.0}, {"hr": 134.0, "p": 273.0, "pace": 6.47, "s": 2.575, "c": 81.0}, {"hr": 132.0, "p": 163.0, "pace": 8.27, "s": 2.015, "c": 59.0}, {"hr": 112.0, "p": 254.0, "pace": 7.5, "s": 2.221, "c": 80.0}, {"hr": 113.0, "p": 287.0, "pace": 6.54, "s": 2.547, "c": 81.0}, {"hr": 118.0, "p": 234.0, "pace": 7.26, "s": 2.295, "c": 80.0}, {"hr": 123.0, "p": 292.0, "pace": 6.5, "s": 2.566, "c": 81.0}, {"hr": 127.0, "p": 287.0, "pace": 6.64, "s": 2.51, "c": 81.0}, {"hr": 129.0, "p": 272.0, "pace": 6.24, "s": 2.669, "c": 81.0}, {"hr": 131.0, "p": 270.0, "pace": 6.16, "s": 2.706, "c": 82.0}, {"hr": 133.0, "p": 125.0, "pace": 6.2, "s": 2.687, "c": 40.0}, {"hr": 132.0, "p": 218.0, "pace": 7.35, "s": 2.267, "c": 66.0}, {"hr": 133.0, "p": 198.0, "pace": 7.67, "s": 2.174, "c": 63.0}, {"hr": 130.0, "p": 191.0, "pace": 8.15, "s": 2.044, "c": 64.0}, {"hr": 113.0, "p": 234.0, "pace": 7.32, "s": 2.277, "c": 80.0}, {"hr": 117.0, "p": 252.0, "pace": 7.06, "s": 2.361, "c": 80.0}, {"hr": 120.0, "p": 257.0, "pace": 6.84, "s": 2.435, "c": 83.0}, {"hr": 127.0, "p": 262.0, "pace": 6.69, "s": 2.491, "c": 82.0}, {"hr": 129.0, "p": 270.0, "pace": 6.54, "s": 2.547, "c": 81.0}, {"hr": 130.0, "p": 277.0, "pace": 6.52, "s": 2.557, "c": 82.0}, {"hr": 131.0, "p": 272.0, "pace": 6.4, "s": 2.603, "c": 81.0}, {"hr": 132.0, "p": 274.0, "pace": 6.33, "s": 2.631, "c": 82.0}, {"hr": 108.0, "p": 254.0, "pace": 7.47, "s": 2.23, "c": 80.0}, {"hr": 110.0, "p": 261.0, "pace": 6.9, "s": 2.417, "c": 81.0}, {"hr": 115.0, "p": 254.0, "pace": 6.87, "s": 2.426, "c": 81.0}, {"hr": 118.0, "p": 260.0, "pace": 6.82, "s": 2.445, "c": 81.0}, {"hr": 122.0, "p": 269.0, "pace": 6.59, "s": 2.529, "c": 81.0}, {"hr": 126.0, "p": 270.0, "pace": 6.57, "s": 2.538, "c": 81.0}, {"hr": 128.0, "p": 267.0, "pace": 6.57, "s": 2.538, "c": 81.0}, {"hr": 129.0, "p": 264.0, "pace": 6.59, "s": 2.529, "c": 80.0}, {"hr": 128.0, "p": 264.0, "pace": 6.66, "s": 2.501, "c": 80.0}, {"hr": 127.0, "p": 262.0, "pace": 6.69, "s": 2.491, "c": 81.0}, {"hr": 125.0, "p": 262.0, "pace": 6.69, "s": 2.491, "c": 82.0}, {"hr": 125.0, "p": 261.0, "pace": 6.77, "s": 2.463, "c": 80.0}, {"hr": 126.0, "p": 266.0, "pace": 6.74, "s": 2.473, "c": 81.0}, {"hr": 128.0, "p": 264.0, "pace": 6.72, "s": 2.482, "c": 81.0}, {"hr": 128.0, "p": 263.0, "pace": 6.72, "s": 2.482, "c": 81.0}, {"hr": 126.0, "p": 265.0, "pace": 6.74, "s": 2.473, "c": 81.0}, {"hr": 120.0, "p": 265.0, "pace": 6.74, "s": 2.473, "c": 81.0}, {"hr": 128.0, "p": 259.0, "pace": 6.79, "s": 2.454, "c": 81.0}, {"hr": 129.0, "p": 258.0, "pace": 6.77, "s": 2.463, "c": 81.0}, {"hr": 128.0, "p": 258.0, "pace": 6.82, "s": 2.445, "c": 82.0}, {"hr": 129.0, "p": 260.0, "pace": 6.82, "s": 2.445, "c": 81.0}, {"hr": 130.0, "p": 260.0, "pace": 6.77, "s": 2.463, "c": 82.0}, {"hr": 131.0, "p": 261.0, "pace": 6.77, "s": 2.463, "c": 82.0}, {"hr": 131.0, "p": 173.0, "pace": 7.03, "s": 2.37, "c": 60.0}, {"hr": 112.0, "p": 248.0, "pace": 7.23, "s": 2.305, "c": 81.0}, {"hr": 115.0, "p": 259.0, "pace": 7.09, "s": 2.351, "c": 81.0}, {"hr": 121.0, "p": 264.0, "pace": 6.84, "s": 2.435, "c": 81.0}, {"hr": 126.0, "p": 269.0, "pace": 6.66, "s": 2.501, "c": 81.0}, {"hr": 128.0, "p": 262.0, "pace": 6.69, "s": 2.491, "c": 81.0}, {"hr": 128.0, "p": 257.0, "pace": 6.72, "s": 2.482, "c": 80.0}, {"hr": 129.0, "p": 256.0, "pace": 6.69, "s": 2.491, "c": 81.0}, {"hr": 129.0, "p": 254.0, "pace": 6.74, "s": 2.473, "c": 81.0}, {"hr": 130.0, "p": 256.0, "pace": 6.72, "s": 2.482, "c": 80.0}, {"hr": 131.0, "p": 255.0, "pace": 6.77, "s": 2.463, "c": 81.0}, {"hr": 131.0, "p": 257.0, "pace": 6.69, "s": 2.491, "c": 81.0}, {"hr": 130.0, "p": 256.0, "pace": 6.72, "s": 2.482, "c": 81.0}, {"hr": 129.0, "p": 257.0, "pace": 6.69, "s": 2.491, "c": 81.0}, {"hr": 129.0, "p": 261.0, "pace": 6.69, "s": 2.491, "c": 81.0}, {"hr": 128.0, "p": 264.0, "pace": 6.64, "s": 2.51, "c": 81.0}, {"hr": 128.0, "p": 265.0, "pace": 6.59, "s": 2.529, "c": 82.0}, {"hr": 131.0, "p": 271.0, "pace": 6.57, "s": 2.538, "c": 82.0}, {"hr": 132.0, "p": 272.0, "pace": 6.54, "s": 2.547, "c": 81.0}, {"hr": 106.0, "p": 238.0, "pace": 8.12, "s": 2.053, "c": 80.0}, {"hr": 111.0, "p": 234.0, "pace": 7.44, "s": 2.239, "c": 81.0}, {"hr": 114.0, "p": 251.0, "pace": 7.14, "s": 2.333, "c": 80.0}, {"hr": 114.0, "p": 248.0, "pace": 6.82, "s": 2.445, "c": 80.0}, {"hr": 120.0, "p": 252.0, "pace": 6.84, "s": 2.435, "c": 81.0}, {"hr": 123.0, "p": 254.0, "pace": 6.82, "s": 2.445, "c": 81.0}, {"hr": 124.0, "p": 265.0, "pace": 6.79, "s": 2.454, "c": 81.0}, {"hr": 125.0, "p": 272.0, "pace": 6.79, "s": 2.454, "c": 80.0}, {"hr": 127.0, "p": 272.0, "pace": 6.79, "s": 2.454, "c": 80.0}, {"hr": 129.0, "p": 262.0, "pace": 6.74, "s": 2.473, "c": 81.0}, {"hr": 131.0, "p": 262.0, "pace": 6.74, "s": 2.473, "c": 81.0}, {"hr": 132.0, "p": 258.0, "pace": 6.69, "s": 2.491, "c": 81.0}, {"hr": 132.0, "p": 250.0, "pace": 6.74, "s": 2.473, "c": 81.0}, {"hr": 109.0, "p": 240.0, "pace": 8.01, "s": 2.081, "c": 80.0}, {"hr": 113.0, "p": 247.0, "pace": 7.38, "s": 2.258, "c": 79.0}, {"hr": 115.0, "p": 241.0, "pace": 7.17, "s": 2.323, "c": 80.0}, {"hr": 118.0, "p": 240.0, "pace": 7.14, "s": 2.333, "c": 79.0}, {"hr": 122.0, "p": 243.0, "pace": 7.2, "s": 2.314, "c": 79.0}, {"hr": 123.0, "p": 244.0, "pace": 7.17, "s": 2.323, "c": 80.0}, {"hr": 124.0, "p": 247.0, "pace": 7.09, "s": 2.351, "c": 80.0}, {"hr": 124.0, "p": 247.0, "pace": 7.06, "s": 2.361, "c": 80.0}, {"hr": 124.0, "p": 228.0, "pace": 7.17, "s": 2.323, "c": 81.0}, {"hr": 116.0, "p": 354.0, "pace": 7.03, "s": 2.37, "c": 85.0}, {"hr": 123.0, "p": 274.0, "pace": 6.08, "s": 2.743, "c": 83.0}, {"hr": 128.0, "p": 305.0, "pace": 5.93, "s": 2.809, "c": 83.0}, {"hr": 133.0, "p": 311.0, "pace": 5.67, "s": 2.939, "c": 83.0}, {"hr": 136.0, "p": 312.0, "pace": 5.53, "s": 3.014, "c": 83.0}, {"hr": 138.0, "p": 289.0, "pace": 5.4, "s": 3.089, "c": 84.0}, {"hr": 139.0, "p": 298.0, "pace": 5.41, "s": 3.079, "c": 84.0}, {"hr": 140.0, "p": 308.0, "pace": 5.46, "s": 3.051, "c": 84.0}, {"hr": 140.0, "p": 323.0, "pace": 5.44, "s": 3.061, "c": 85.0}, {"hr": 138.0, "p": 308.0, "pace": 5.55, "s": 3.005, "c": 84.0}, {"hr": 135.0, "p": 361.0, "pace": 5.87, "s": 2.837, "c": 85.0}, {"hr": 141.0, "p": 362.0, "pace": 5.93, "s": 2.809, "c": 84.0}, {"hr": 143.0, "p": 312.0, "pace": 6.05, "s": 2.753, "c": 83.0}, {"hr": 141.0, "p": 187.0, "pace": 8.27, "s": 2.016, "c": 65.0}, {"hr": 139.0, "p": 188.0, "pace": 8.27, "s": 2.016, "c": 65.0}, {"hr": 120.0, "p": 284.0, "pace": 6.4, "s": 2.603, "c": 84.0}, {"hr": 128.0, "p": 294.0, "pace": 5.9, "s": 2.827, "c": 84.0}, {"hr": 133.0, "p": 304.0, "pace": 5.71, "s": 2.921, "c": 84.0}, {"hr": 137.0, "p": 310.0, "pace": 5.69, "s": 2.93, "c": 84.0}, {"hr": 141.0, "p": 315.0, "pace": 5.73, "s": 2.911, "c": 84.0}, {"hr": 143.0, "p": 320.0, "pace": 5.73, "s": 2.911, "c": 84.0}, {"hr": 144.0, "p": 325.0, "pace": 5.73, "s": 2.911, "c": 84.0}, {"hr": 144.0, "p": 332.0, "pace": 5.62, "s": 2.967, "c": 84.0}, {"hr": 144.0, "p": 331.0, "pace": 5.63, "s": 2.958, "c": 84.0}, {"hr": 146.0, "p": 332.0, "pace": 5.56, "s": 2.995, "c": 85.0}, {"hr": 148.0, "p": 337.0, "pace": 5.41, "s": 3.079, "c": 85.0}, {"hr": 148.0, "p": 336.0, "pace": 5.44, "s": 3.061, "c": 83.0}, {"hr": 147.0, "p": 345.0, "pace": 5.4, "s": 3.089, "c": 84.0}, {"hr": 146.0, "p": 344.0, "pace": 5.53, "s": 3.014, "c": 66.0}, {"hr": 140.0, "p": 199.0, "pace": 8.01, "s": 2.081, "c": 64.0}, {"hr": 129.0, "p": 170.0, "pace": 8.27, "s": 2.016, "c": 64.0}, {"hr": 123.0, "p": 185.0, "pace": 8.27, "s": 2.016, "c": 64.0}, {"hr": 121.0, "p": 201.0, "pace": 8.15, "s": 2.044, "c": 64.0}, {"hr": 119.0, "p": 270.0, "pace": 7.9, "s": 2.109, "c": 82.0}, {"hr": 123.0, "p": 273.0, "pace": 6.33, "s": 2.631, "c": 84.0}, {"hr": 125.0, "p": 294.0, "pace": 6.01, "s": 2.771, "c": 84.0}, {"hr": 130.0, "p": 311.0, "pace": 5.73, "s": 2.911, "c": 84.0}, {"hr": 128.0, "p": 307.0, "pace": 5.6, "s": 2.977, "c": 85.0}, {"hr": 131.0, "p": 316.0, "pace": 5.53, "s": 3.014, "c": 87.0}, {"hr": 137.0, "p": 330.0, "pace": 5.48, "s": 3.042, "c": 84.0}, {"hr": 140.0, "p": 333.0, "pace": 5.43, "s": 3.07, "c": 84.0}, {"hr": 141.0, "p": 327.0, "pace": 5.41, "s": 3.079, "c": 84.0}, {"hr": 142.0, "p": 326.0, "pace": 5.36, "s": 3.107, "c": 85.0}, {"hr": 143.0, "p": 325.0, "pace": 5.35, "s": 3.116, "c": 85.0}, {"hr": 143.0, "p": 322.0, "pace": 5.36, "s": 3.107, "c": 85.0}, {"hr": 144.0, "p": 330.0, "pace": 5.41, "s": 3.079, "c": 85.0}, {"hr": 144.0, "p": 325.0, "pace": 5.48, "s": 3.042, "c": 84.0}, {"hr": 142.0, "p": 210.0, "pace": 7.14, "s": 2.333, "c": 62.0}, {"hr": 139.0, "p": 214.0, "pace": 7.87, "s": 2.118, "c": 62.0}, {"hr": 133.0, "p": 191.0, "pace": 8.15, "s": 2.044, "c": 63.0}, {"hr": 121.0, "p": 296.0, "pace": 6.31, "s": 2.641, "c": 83.0}, {"hr": 122.0, "p": 322.0, "pace": 6.18, "s": 2.697, "c": 83.0}, {"hr": 126.0, "p": 300.0, "pace": 5.95, "s": 2.799, "c": 85.0}, {"hr": 130.0, "p": 308.0, "pace": 5.9, "s": 2.827, "c": 85.0}, {"hr": 135.0, "p": 301.0, "pace": 5.93, "s": 2.809, "c": 86.0}, {"hr": 138.0, "p": 322.0, "pace": 5.74, "s": 2.902, "c": 86.0}, {"hr": 140.0, "p": 343.0, "pace": 5.6, "s": 2.977, "c": 86.0}, {"hr": 140.0, "p": 358.0, "pace": 5.51, "s": 3.023, "c": 87.0}, {"hr": 140.0, "p": 347.0, "pace": 5.51, "s": 3.023, "c": 84.0}, {"hr": 139.0, "p": 336.0, "pace": 5.65, "s": 2.948, "c": 84.0}, {"hr": 137.0, "p": 331.0, "pace": 5.73, "s": 2.911, "c": 85.0}, {"hr": 136.0, "p": 337.0, "pace": 5.8, "s": 2.874, "c": 84.0}, {"hr": 137.0, "p": 332.0, "pace": 5.87, "s": 2.837, "c": 84.0}, {"hr": 135.0, "p": 202.0, "pace": 7.8, "s": 2.137, "c": 61.0}, {"hr": 129.0, "p": 182.0, "pace": 8.31, "s": 2.006, "c": 61.0}, {"hr": 119.0, "p": 341.0, "pace": 6.27, "s": 2.659, "c": 85.0}, {"hr": 125.0, "p": 392.0, "pace": 5.99, "s": 2.781, "c": 84.0}, {"hr": 131.0, "p": 355.0, "pace": 6.14, "s": 2.715, "c": 82.0}, {"hr": 134.0, "p": 333.0, "pace": 5.95, "s": 2.799, "c": 83.0}, {"hr": 137.0, "p": 321.0, "pace": 5.91, "s": 2.818, "c": 83.0}, {"hr": 138.0, "p": 325.0, "pace": 5.87, "s": 2.837, "c": 84.0}, {"hr": 137.0, "p": 324.0, "pace": 5.86, "s": 2.846, "c": 84.0}, {"hr": 137.0, "p": 323.0, "pace": 5.91, "s": 2.818, "c": 84.0}, {"hr": 135.0, "p": 324.0, "pace": 5.91, "s": 2.818, "c": 85.0}, {"hr": 133.0, "p": 333.0, "pace": 5.93, "s": 2.809, "c": 84.0}, {"hr": 133.0, "p": 329.0, "pace": 5.99, "s": 2.781, "c": 84.0}, {"hr": 134.0, "p": 351.0, "pace": 5.95, "s": 2.799, "c": 85.0}, {"hr": 137.0, "p": 351.0, "pace": 5.95, "s": 2.799, "c": 84.0}, {"hr": 137.0, "p": 269.0, "pace": 6.62, "s": 2.519, "c": 62.0}], "laps": [{"num": 1, "start_t": 0, "end_t": 570.0, "dist": 1000.0, "dur": 570.0, "hr": 103.0, "maxhr": 123.0, "power": 151.0}, {"num": 2, "start_t": 570.0, "end_t": 600.0, "dist": 51.0, "dur": 30.0, "hr": 99.0, "maxhr": 101.0, "power": 144.0}, {"num": 3, "start_t": 600.0, "end_t": 1040.0, "dist": 1000.0, "dur": 440.0, "hr": 121.0, "maxhr": 138.0, "power": 229.0}, {"num": 4, "start_t": 1040.0, "end_t": 1513.0, "dist": 1000.0, "dur": 473.0, "hr": 122.0, "maxhr": 138.0, "power": 207.0}, {"num": 5, "start_t": 1513.0, "end_t": 1951.0, "dist": 1000.0, "dur": 438.0, "hr": 123.0, "maxhr": 133.0, "power": 225.0}, {"num": 6, "start_t": 1951.0, "end_t": 2400.0, "dist": 995.0, "dur": 449.0, "hr": 123.0, "maxhr": 133.0, "power": 220.0}, {"num": 7, "start_t": 2400.0, "end_t": 2580.0, "dist": 324.0, "dur": 180.0, "hr": 118.0, "maxhr": 126.0, "power": 172.0}, {"num": 8, "start_t": 2580.0, "end_t": 2700.0, "dist": 339.0, "dur": 120.0, "hr": 129.0, "maxhr": 141.0, "power": 289.0}, {"num": 9, "start_t": 2700.0, "end_t": 2880.0, "dist": 328.0, "dur": 180.0, "hr": 123.0, "maxhr": 143.0, "power": 184.0}, {"num": 10, "start_t": 2880.0, "end_t": 3000.0, "dist": 361.0, "dur": 120.0, "hr": 137.0, "maxhr": 148.0, "power": 309.0}, {"num": 11, "start_t": 3000.0, "end_t": 3180.0, "dist": 326.0, "dur": 180.0, "hr": 123.0, "maxhr": 147.0, "power": 189.0}, {"num": 12, "start_t": 3180.0, "end_t": 3300.0, "dist": 360.0, "dur": 120.0, "hr": 134.0, "maxhr": 145.0, "power": 305.0}, {"num": 13, "start_t": 3300.0, "end_t": 3480.0, "dist": 318.0, "dur": 180.0, "hr": 122.0, "maxhr": 145.0, "power": 190.0}, {"num": 14, "start_t": 3480.0, "end_t": 3600.0, "dist": 346.0, "dur": 120.0, "hr": 132.0, "maxhr": 141.0, "power": 314.0}, {"num": 15, "start_t": 3600.0, "end_t": 3780.0, "dist": 313.0, "dur": 180.0, "hr": 117.0, "maxhr": 137.0, "power": 179.0}, {"num": 16, "start_t": 3780.0, "end_t": 3900.0, "dist": 336.0, "dur": 120.0, "hr": 131.0, "maxhr": 138.0, "power": 328.0}, {"num": 17, "start_t": 3900.0, "end_t": 4489.0, "dist": 1000.0, "dur": 589.0, "hr": 108.0, "maxhr": 138.0, "power": 151.0}, {"num": 18, "start_t": 4489.0, "end_t": 4500.0, "dist": 20.0, "dur": 11.0, "hr": 103.0, "maxhr": 104.0, "power": 168.0}, {"num": 19, "start_t": 4500.0, "end_t": 4616.0, "dist": 145.0, "dur": 116.0, "hr": 104.0, "maxhr": 110.0, "power": 109.0}], "phases": [{"name": "L\u00e4mmittely", "start": 0, "end": 600, "color": "rgba(100,180,100,0.15)"}, {"name": "30 min sykeohjattu", "start": 600, "end": 2400, "color": "rgba(68,114,196,0.15)"}, {"name": "5\u00d7 k\u00e4vely/h\u00f6lkk\u00e4", "start": 2400, "end": 3900, "color": "rgba(237,125,49,0.15)"}, {"name": "J\u00e4\u00e4hdyttely", "start": 3900, "end": 4616, "color": "rgba(100,180,100,0.15)"}]};
+
+// Color helpers
+const WALK = 'rgba(79,195,247,0.7)';
+const RUN = 'rgba(255,112,67,0.7)';
+const WALK_BG = 'rgba(79,195,247,0.3)';
+const RUN_BG = 'rgba(255,112,67,0.3)';
+
+// Phase annotations for charts
+function phaseAnnotations() {
+  const a = {};
+  D.phases.forEach((p, i) => {
+    a['phase'+i] = {
+      type: 'box', xMin: p.start, xMax: p.end,
+      backgroundColor: p.color, borderWidth: 0
+    };
+  });
+  // HR 130 line
+  a['hr130'] = {
+    type: 'line', yMin: 130, yMax: 130,
+    borderColor: 'rgba(255,107,107,0.5)', borderWidth: 2, borderDash: [6,3],
+    label: { display: true, content: 'HR 130 katto', position: 'start', color: 'rgba(255,107,107,0.7)', font: {size: 10} }
+  };
+  return a;
+}
+
+// 1. Stamina chart
+new Chart(document.getElementById('staminaChart'), {
+  type: 'line',
+  data: {
+    labels: D.timeline.map(p => p.t),
+    datasets: [
+      {
+        label: 'Stamina (%)',
+        data: D.timeline.map(p => p.st),
+        borderColor: '#70AD47',
+        backgroundColor: 'rgba(112,173,71,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 0,
+        borderWidth: 2.5,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Syke (bpm)',
+        data: D.timeline.map(p => p.hr),
+        borderColor: 'rgba(255,107,107,0.5)',
+        tension: 0.3,
+        pointRadius: 0,
+        borderWidth: 1.5,
+        yAxisID: 'y2'
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: {
+        type: 'linear', title: { display: true, text: 'Aika (s)', color: '#9ca3af' },
+        ticks: {
+          color: '#9ca3af',
+          callback: v => { const m = Math.floor(v/60); return m + ' min'; }
+        },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      y: {
+        position: 'left', min: 50, max: 105,
+        title: { display: true, text: 'Stamina %', color: '#70AD47' },
+        ticks: { color: '#70AD47' },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      y2: {
+        position: 'right', min: 70, max: 160,
+        title: { display: true, text: 'Syke (bpm)', color: '#FF6B6B' },
+        ticks: { color: '#FF6B6B' },
+        grid: { display: false }
+      }
+    },
+    plugins: {
+      annotation: { annotations: phaseAnnotations() },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 2. Timeline chart (HR, Power, Speed)
+new Chart(document.getElementById('timelineChart'), {
+  type: 'line',
+  data: {
+    labels: D.timeline.map(p => p.t),
+    datasets: [
+      {
+        label: 'Syke (bpm)',
+        data: D.timeline.map(p => p.hr),
+        borderColor: '#FF6B6B',
+        tension: 0.3, pointRadius: 0, borderWidth: 2,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Teho (W)',
+        data: D.timeline.map(p => p.p > 0 ? p.p : null),
+        borderColor: '#ED7D31',
+        tension: 0.3, pointRadius: 0, borderWidth: 1.5,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Nopeus (km/h)',
+        data: D.timeline.map(p => p.s > 0 ? +(p.s * 3.6).toFixed(1) : null),
+        borderColor: '#4472C4',
+        tension: 0.3, pointRadius: 0, borderWidth: 1.5,
+        yAxisID: 'y2'
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: {
+        type: 'linear',
+        ticks: { color: '#9ca3af', callback: v => Math.floor(v/60) + ' min' },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      y: {
+        position: 'left', min: 0, max: 420,
+        title: { display: true, text: 'Syke / Teho', color: '#e4e4e7' },
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      y2: {
+        position: 'right', min: 0, max: 14,
+        title: { display: true, text: 'Nopeus (km/h)', color: '#4472C4' },
+        ticks: { color: '#4472C4' },
+        grid: { display: false }
+      }
+    },
+    plugins: {
+      annotation: { annotations: phaseAnnotations() },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 3. Scatter HR vs Speed
+new Chart(document.getElementById('scatterHrSpeed'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: 'Kävely',
+        data: D.scatter_walk.map(p => ({ x: +(p.s*3.6).toFixed(1), y: p.hr })),
+        backgroundColor: WALK_BG, borderColor: WALK, pointRadius: 3
+      },
+      {
+        label: 'Hölkkä/juoksu',
+        data: D.scatter_run.map(p => ({ x: +(p.s*3.6).toFixed(1), y: p.hr })),
+        backgroundColor: RUN_BG, borderColor: RUN, pointRadius: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: { display: true, text: 'Nopeus (km/h)', color: '#9ca3af' },
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        min: 3, max: 13
+      },
+      y: {
+        title: { display: true, text: 'Syke (bpm)', color: '#9ca3af' },
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        min: 85, max: 155
+      }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          hr130: {
+            type: 'line', yMin: 130, yMax: 130,
+            borderColor: 'rgba(255,107,107,0.6)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'HR 130', position: 'start', color: '#FF6B6B', font: {size: 10} }
+          },
+          deadzone: {
+            type: 'box', xMin: 6.5, xMax: 7.8, yMin: 85, yMax: 155,
+            backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1, borderDash: [4,4],
+            label: { display: true, content: '"Kuollut alue"', position: 'start', color: 'rgba(255,255,255,0.3)', font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 4. Scatter Power vs Speed
+new Chart(document.getElementById('scatterPowerSpeed'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: 'Kävely',
+        data: D.scatter_walk.map(p => ({ x: +(p.s*3.6).toFixed(1), y: p.p })),
+        backgroundColor: WALK_BG, borderColor: WALK, pointRadius: 3
+      },
+      {
+        label: 'Hölkkä/juoksu',
+        data: D.scatter_run.map(p => ({ x: +(p.s*3.6).toFixed(1), y: p.p })),
+        backgroundColor: RUN_BG, borderColor: RUN, pointRadius: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: { display: true, text: 'Nopeus (km/h)', color: '#9ca3af' },
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        min: 3, max: 13
+      },
+      y: {
+        title: { display: true, text: 'Teho (W)', color: '#9ca3af' },
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        min: 50, max: 420
+      }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          deadzone: {
+            type: 'box', xMin: 6.5, xMax: 7.8, yMin: 50, yMax: 420,
+            backgroundColor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1, borderDash: [4,4],
+            label: { display: true, content: '"Kuollut alue"', position: 'start', color: 'rgba(255,255,255,0.3)', font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 5. Scatter Power vs HR
+new Chart(document.getElementById('scatterPowerHr'), {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: 'Kävely',
+        data: D.scatter_walk.map(p => ({ x: p.hr, y: p.p })),
+        backgroundColor: WALK_BG, borderColor: WALK, pointRadius: 3
+      },
+      {
+        label: 'Hölkkä/juoksu',
+        data: D.scatter_run.map(p => ({ x: p.hr, y: p.p })),
+        backgroundColor: RUN_BG, borderColor: RUN, pointRadius: 3
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: {
+        title: { display: true, text: 'Syke (bpm)', color: '#9ca3af' },
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        min: 85, max: 155
+      },
+      y: {
+        title: { display: true, text: 'Teho (W)', color: '#9ca3af' },
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        min: 50, max: 420
+      }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          hr130: {
+            type: 'line', xMin: 130, xMax: 130,
+            borderColor: 'rgba(255,107,107,0.5)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'HR 130 katto', position: 'start', color: '#FF6B6B', font: {size: 10} }
+          },
+          sweetspot: {
+            type: 'box', xMin: 118, xMax: 126, yMin: 200, yMax: 250,
+            backgroundColor: 'rgba(112,173,71,0.15)', borderColor: 'rgba(112,173,71,0.4)',
+            borderWidth: 1,
+            label: { display: true, content: 'KK55 sweet spot', position: 'start', color: '#70AD47', font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 6. Steps progression chart
+const steps = [
+  { walk_p: 172, walk_hr: 118, run_p: 289, run_hr: 129 },
+  { walk_p: 184, walk_hr: 123, run_p: 309, run_hr: 137 },
+  { walk_p: 189, walk_hr: 123, run_p: 305, run_hr: 134 },
+  { walk_p: 190, walk_hr: 122, run_p: 314, run_hr: 132 },
+  { walk_p: 179, walk_hr: 117, run_p: 328, run_hr: 131 },
+];
+
+new Chart(document.getElementById('stepsChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Pari 1', 'Pari 2', 'Pari 3', 'Pari 4', 'Pari 5'],
+    datasets: [
+      {
+        label: 'Kävely teho (W)',
+        data: steps.map(s => s.walk_p),
+        backgroundColor: WALK_BG, borderColor: WALK, borderWidth: 1,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Hölkkä teho (W)',
+        data: steps.map(s => s.run_p),
+        backgroundColor: RUN_BG, borderColor: RUN, borderWidth: 1,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Kävely HR',
+        data: steps.map(s => s.walk_hr),
+        type: 'line', borderColor: WALK, tension: 0.3, pointRadius: 5,
+        yAxisID: 'y2', borderWidth: 2
+      },
+      {
+        label: 'Hölkkä HR',
+        data: steps.map(s => s.run_hr),
+        type: 'line', borderColor: RUN, tension: 0.3, pointRadius: 5,
+        yAxisID: 'y2', borderWidth: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: {
+        position: 'left', min: 100, max: 380,
+        title: { display: true, text: 'Teho (W)', color: '#9ca3af' },
+        ticks: { color: '#9ca3af' },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      y2: {
+        position: 'right', min: 110, max: 145,
+        title: { display: true, text: 'Syke (bpm)', color: '#9ca3af' },
+        ticks: { color: '#9ca3af' },
+        grid: { display: false }
+      },
+      x: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+</script>
+</body>
+</html>
