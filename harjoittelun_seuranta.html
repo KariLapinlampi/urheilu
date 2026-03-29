@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harjoittelun seuranta — Kari Lapinlampi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --card-border: #2a2d3a;
+    --text: #e4e4e7;
+    --text-dim: #9ca3af;
+    --accent: #4472C4;
+    --accent2: #ED7D31;
+    --green: #70AD47;
+    --red: #FF6B6B;
+    --yellow: #FFC000;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.8rem;
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, #4472C4, #ED7D31);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 24px; }
+  .grid { display: grid; gap: 20px; margin-bottom: 20px; }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card h2 {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .metric-card .label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-card .value { font-size: 1.8rem; font-weight: 700; margin: 4px 0; }
+  .metric-card .detail { font-size: 0.8rem; color: var(--text-dim); }
+  .countdown {
+    background: linear-gradient(135deg, #1a2744, #1a1d27);
+    border: 1px solid #2a4070;
+  }
+  .countdown .value { color: var(--accent); }
+  .countdown-red .value { color: var(--red); }
+
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap canvas { width: 100% !important; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  th {
+    text-align: left;
+    padding: 8px 10px;
+    background: #252836;
+    color: var(--text-dim);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    position: sticky;
+    top: 0;
+  }
+  td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--card-border);
+  }
+  tr:hover td { background: #252836; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge-ok { background: #1a3a2a; color: #70AD47; }
+  .badge-warn { background: #3a3520; color: #FFC000; }
+  .badge-low { background: #3a2020; color: #FF6B6B; }
+
+  .ohjelma-viikko {
+    margin-bottom: 2px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .ohjelma-header {
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+  }
+  .ohjelma-header:hover { filter: brightness(1.1); }
+  .ohjelma-header .arrow { transition: transform 0.2s; font-size: 0.8rem; }
+  .ohjelma-header.open .arrow { transform: rotate(90deg); }
+  .ohjelma-body { display: none; padding: 0; }
+  .ohjelma-body.open { display: block; }
+  .ohjelma-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 80px auto;
+    gap: 8px;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    align-items: center;
+  }
+  .ohjelma-row .tyyppi {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+  }
+  .ohjelma-row .huomio { color: var(--text-dim); font-size: 0.8rem; }
+
+  .tasapaino-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 100px 80px;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--card-border);
+    font-size: 0.85rem;
+  }
+
+  .periodi-text {
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+    margin-top: 12px;
+  }
+  .periodi-text strong { color: var(--text); }
+
+  .scroll-table {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+
+  .nav {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    padding: 10px 0;
+  }
+  .nav a {
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    transition: all 0.2s;
+  }
+  .nav a { cursor: pointer; }
+  .nav a:hover { color: var(--text); border-color: var(--accent); }
+
+  .updated {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    padding: 20px;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Harjoittelun seuranta</h1>
+<p class="subtitle">Kari Lapinlampi — Karhunkierros NUTS 55 km &bull; Ylläs-Pallas 37 km &bull; Masokistin Unelma ~60 km<br>Päivitetty 29.3.2026 &bull; Data: Garmin Connect</p>
+
+<nav class="nav">
+  <a onclick="document.getElementById('yhteenveto').scrollIntoView({behavior:'smooth'})">Yhteenveto</a>
+  <a onclick="document.getElementById('kuormitus').scrollIntoView({behavior:'smooth'})">Kuormitus</a>
+  <a onclick="document.getElementById('volyymi').scrollIntoView({behavior:'smooth'})">Viikkovolyymi</a>
+  <a onclick="document.getElementById('keho').scrollIntoView({behavior:'smooth'})">Kehonkoostumus</a>
+  <a onclick="document.getElementById('juoksut').scrollIntoView({behavior:'smooth'})">Juoksut</a>
+  <a onclick="document.getElementById('ohjelma').scrollIntoView({behavior:'smooth'})">Ohjelma</a>
+</nav>
+
+<!-- =============== YHTEENVETO =============== -->
+<section id="yhteenveto">
+<div class="grid grid-4">
+  <div class="metric-card countdown">
+    <div class="label">Karhunkierros 55 km</div>
+    <div class="value">54 pv</div>
+    <div class="detail">pe 22.5.2026, Kuusamo</div>
+  </div>
+  <div class="metric-card countdown">
+    <div class="label">Ylläs-Pallas 37 km</div>
+    <div class="value">110 pv</div>
+    <div class="detail">pe 17.7.2026</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Paino</div>
+    <div class="value">75.0 <span style="font-size:0.9rem">kg</span></div>
+    <div class="detail">82→75 kg vuoden alusta</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">VO2max</div>
+    <div class="value" style="color:var(--green)">47.0</div>
+    <div class="detail">ml/kg/min (28.3.2026) ↑</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Leposyke</div>
+    <div class="value">47 <span style="font-size:0.9rem">bpm</span></div>
+    <div class="detail">7 pv ka: 45 bpm</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Rasva-%</div>
+    <div class="value">22.5<span style="font-size:0.9rem">%</span></div>
+    <div class="detail">Lihasmassa 30.5 kg</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Max HR</div>
+    <div class="value" style="color:var(--red)">183 <span style="font-size:0.9rem">bpm</span></div>
+    <div class="detail">Mitattu</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Aktiviteetteja</div>
+    <div class="value">760</div>
+    <div class="detail">yhteensä Garminissa</div>
+  </div>
+</div>
+
+<!-- Kuukausijuoksut -->
+<div class="card" style="margin-bottom:20px">
+  <h2>Kuukausittainen juoksuvolyymi</h2>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Kuukausi</th><th>Juoksuja</th><th>Matka (km)</th><th>Aika (h)</th><th>Keskim. (km)</th></tr>
+    <tr><td>2023-06</td><td>15</td><td>139.0</td><td>15.9</td><td>9.3</td></tr>
+    <tr><td>2023-07</td><td>10</td><td>116.1</td><td>15.3</td><td>11.6</td></tr>
+    <tr><td>2023-08</td><td>12</td><td>107.1</td><td>10.8</td><td>8.9</td></tr>
+    <tr><td>2023-09</td><td>2</td><td>15.9</td><td>1.7</td><td>7.9</td></tr>
+    <tr><td>2023-10</td><td>4</td><td>37.9</td><td>4.4</td><td>9.5</td></tr>
+    <tr><td>2023-11</td><td>3</td><td>61.4</td><td>7.4</td><td>20.5</td></tr>
+    <tr><td>2023-12</td><td>2</td><td>19.6</td><td>2.3</td><td>9.8</td></tr>
+    <tr><td>2024-01</td><td>2</td><td>50.4</td><td>6.4</td><td>25.2</td></tr>
+    <tr><td>2024-02</td><td>5</td><td>43.6</td><td>7.9</td><td>8.7</td></tr>
+    <tr><td>2024-03</td><td>11</td><td>91.0</td><td>11.0</td><td>8.3</td></tr>
+    <tr><td>2024-04</td><td>8</td><td>62.7</td><td>8.6</td><td>7.8</td></tr>
+    <tr><td>2024-05</td><td>5</td><td>73.6</td><td>11.8</td><td>14.7</td></tr>
+    <tr><td>2024-06</td><td>7</td><td>58.8</td><td>8.3</td><td>8.4</td></tr>
+    <tr><td>2024-07</td><td>4</td><td>27.6</td><td>3.7</td><td>6.9</td></tr>
+    <tr><td>2024-08</td><td>8</td><td>116.0</td><td>19.6</td><td>14.5</td></tr>
+    <tr><td>2024-09</td><td>5</td><td>38.4</td><td>4.9</td><td>7.7</td></tr>
+    <tr><td>2024-10</td><td>6</td><td>59.1</td><td>6.6</td><td>9.9</td></tr>
+    <tr><td>2024-11</td><td>4</td><td>39.1</td><td>5.6</td><td>9.8</td></tr>
+    <tr><td>2024-12</td><td>19</td><td>132.0</td><td>14.5</td><td>6.9</td></tr>
+    <tr><td>2025-01</td><td>16</td><td>115.8</td><td>12.5</td><td>7.2</td></tr>
+    <tr><td>2025-02</td><td>10</td><td>62.8</td><td>7.7</td><td>6.3</td></tr>
+    <tr><td>2025-03</td><td>19</td><td>162.4</td><td>16.8</td><td>8.5</td></tr>
+    <tr><td>2025-04</td><td>15</td><td>129.4</td><td>13.5</td><td>8.6</td></tr>
+    <tr><td>2025-05</td><td>7</td><td>81.6</td><td>11.5</td><td>11.7</td></tr>
+    <tr><td>2025-06</td><td>4</td><td>55.0</td><td>7.1</td><td>13.8</td></tr>
+    <tr><td>2025-07</td><td>6</td><td>40.0</td><td>4.4</td><td>6.7</td></tr>
+    <tr><td>2025-08</td><td>13</td><td>102.2</td><td>10.7</td><td>7.9</td></tr>
+    <tr><td>2025-09</td><td>7</td><td>63.9</td><td>6.7</td><td>9.1</td></tr>
+    <tr><td>2025-10</td><td>2</td><td>20.5</td><td>2.1</td><td>10.2</td></tr>
+    <tr><td>2025-11</td><td>9</td><td>57.5</td><td>6.2</td><td>6.4</td></tr>
+    <tr><td>2025-12</td><td>10</td><td>71.4</td><td>7.9</td><td>7.1</td></tr>
+    <tr><td>2026-01</td><td>13</td><td>68.2</td><td>8.7</td><td>5.2</td></tr>
+    <tr><td>2026-02</td><td>15</td><td>104.3</td><td>12.2</td><td>7.0</td></tr>
+    <tr><td>2026-03</td><td>9</td><td>56.8</td><td>7.2</td><td>6.3</td></tr>
+  </table>
+  </div>
+</div>
+
+<!-- Kuormitustasapaino -->
+<div class="card" style="margin-bottom:20px">
+  <h2>Kuormitustasapaino (28 pv)</h2>
+  <div class="tasapaino-row">
+    <div>Aerobinen matala (PK, kävely)</div><div><strong>831</strong></div><div style="color:var(--text-dim)">599–1032</div><div><span class="badge badge-ok">OK</span></div>
+  </div>
+  <div class="tasapaino-row">
+    <div>Aerobinen korkea (tempo, intervallit)</div><div><strong>523</strong></div><div style="color:var(--text-dim)">718–1151</div><div><span class="badge badge-low">VAJAA</span></div>
+  </div>
+  <div class="tasapaino-row">
+    <div>Anaerobinen</div><div><strong>220</strong></div><div style="color:var(--text-dim)">67–327</div><div><span class="badge badge-ok">OK</span></div>
+  </div>
+  <div class="periodi-text">
+    <strong>--- KARHUNKIERROS 55 km (pe 22.5.) ---</strong><br>
+    Vko 13 (paluu): 9 harj., 7t 04min, 40 km. Kenttätesti: kestävä hölkkä ~130 bpm. VO2max 47.0. Su polkukävely 9,5 km Sanginsuussa.<br>
+    Vko 14–15 (rakennus): Kovin jakso — tempo, VO2max, pitkät maastolenkit.<br>
+    Vko 16 (normaali + Helsinki): 3D-skannaus ti, ooppera to–la.<br>
+    Vko 17 (linssileikkaus to): Alkuviikko normaali, leikkaus to → lepo.<br>
+    Vko 18 (palautuminen): Varovainen paluu linssileikkauksesta.<br>
+    Vko 19 (viimeinen treeni): Normaali viikko ylläpitävänä.<br>
+    Vko 20 (kevennys): Jalat tuoreiksi.<br>
+    Vko 21 (kilpailu): Lepo + KARHUNKIERROS 55 km.<br>
+    <br>
+    <strong>--- YLLÄS-PALLAS 37 km (pe 17.7.) ---</strong><br>
+    Vko 22–23 (palautuminen): KK55:stä toipuminen.<br>
+    Vko 24 (paluu): Varovainen paluu juoksuun.<br>
+    Vko 25–27 (rakennus): Nouseva kuormitus.<br>
+    Vko 28 (kevennys): Jalat tuoreiksi.<br>
+    Vko 29 (kilpailu): YLLÄS-PALLAS 37 km.<br>
+    <br>
+    <strong>--- MASOKISTIN UNELMA ~60 km (la 1.8.) — EPÄVARMA ---</strong><br>
+    Vko 30 (palautuminen): YP37:stä toipuminen.<br>
+    Vko 31 (kilpailu): MASOKISTIN UNELMA, helppo tasainen reitti.<br>
+  </div>
+</div>
+</section>
+
+<!-- =============== KUORMITUS =============== -->
+<section id="kuormitus">
+<div class="card" style="margin-bottom:20px">
+  <h2>Training Load — toteutunut vs. suunniteltu</h2>
+  <div class="chart-wrap"><canvas id="loadChart" height="250"></canvas></div>
+</div>
+<div class="card" style="margin-bottom:20px">
+  <h2>Harjoitustunnit viikossa</h2>
+  <div class="chart-wrap"><canvas id="hoursChart" height="220"></canvas></div>
+</div>
+</section>
+
+<!-- =============== VIIKKOVOLYYMI =============== -->
+<section id="volyymi">
+<div class="card" style="margin-bottom:20px">
+  <h2>Viikkovolyymi lajeittain (h)</h2>
+  <div class="chart-wrap"><canvas id="volChart" height="250"></canvas></div>
+</div>
+</section>
+
+<!-- =============== KEHONKOOSTUMUS =============== -->
+<section id="keho">
+<div class="card" style="margin-bottom:20px">
+  <h2>Painon kehitys</h2>
+  <div class="chart-wrap"><canvas id="painoChart" height="280"></canvas></div>
+</div>
+</section>
+
+<!-- =============== JUOKSUT =============== -->
+<section id="juoksut">
+<div class="card" style="margin-bottom:20px">
+  <h2>Viimeisimmät juoksut</h2>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Päivä</th><th>Nimi</th><th>km</th><th>min</th><th>Keskim. syke</th><th>Max syke</th><th>TE Aer</th><th>TE Ana</th><th>Nousu</th><th>kcal</th></tr>
+    <tr><td>2026-03-28</td><td>Oulu - La 28.03. Kävely/hölkkä -kenttätesti</td><td>9.6</td><td>77</td><td>118</td><td>148</td><td>3.1</td><td>0.2</td><td>23</td><td>673</td></tr>
+    <tr><td>2026-03-26</td><td>Oulu - To 26.03. Tiedonkeruu — watti/</td><td>4.6</td><td>39</td><td>107</td><td>120</td><td>2.1</td><td>0</td><td>20</td><td>313</td></tr>
+    <tr><td>2026-03-24</td><td>Mattokävely 30 min 18% nousulla</td><td>2.3</td><td>30</td><td>139</td><td>155</td><td>3.5</td><td>0.1</td><td>408</td><td>368</td></tr>
+    <tr><td>2026-03-23</td><td>Oulu - Ma 23.03. Kevyt juoksu — paluu</td><td>5.6</td><td>37</td><td>122</td><td>140</td><td>3.2</td><td>0</td><td>27</td><td>411</td></tr>
+    <tr><td>2026-03-22</td><td>Oulu - Peruskunto</td><td>9.4</td><td>61</td><td>130</td><td>142</td><td>3.5</td><td>0</td><td>27</td><td>701</td></tr>
+    <tr><td>2026-03-12</td><td>Treadmill Running</td><td>2.1</td><td>28</td><td>138</td><td>152</td><td>3.3</td><td>0.1</td><td>360</td><td>340</td></tr>
+    <tr><td>2026-03-10</td><td>Treadmill Running</td><td>1.3</td><td>16</td><td>118</td><td>131</td><td>2.1</td><td>0</td><td>130</td><td>164</td></tr>
+    <tr><td>2026-03-09</td><td>Oulu - VO2max</td><td>8.0</td><td>47</td><td>138</td><td>161</td><td>3.8</td><td>2.9</td><td>23</td><td>588</td></tr>
+    <tr><td>2026-03-07</td><td>Kuusamo - Pitkä juoksu</td><td>13.9</td><td>98</td><td>130</td><td>151</td><td>3.7</td><td>0</td><td>214</td><td>1088</td></tr>
+    <tr><td>2026-02-28</td><td>Oulu - Pitkä juoksu</td><td>13.0</td><td>85</td><td>129</td><td>142</td><td>3.8</td><td>0</td><td>60</td><td>969</td></tr>
+    <tr><td>2026-02-26</td><td>Treadmill Running</td><td>2.1</td><td>28</td><td>133</td><td>145</td><td>3.1</td><td>0</td><td>360</td><td>334</td></tr>
+    <tr><td>2026-02-25</td><td>Oulu - Tempo</td><td>7.6</td><td>44</td><td>137</td><td>151</td><td>3.9</td><td>0</td><td>32</td><td>555</td></tr>
+    <tr><td>2026-02-23</td><td>Treadmill Running</td><td>2.1</td><td>30</td><td>121</td><td>132</td><td>2.4</td><td>0</td><td>300</td><td>304</td></tr>
+    <tr><td>2026-02-22</td><td>Oulu - Pitkä juoksu</td><td>10.9</td><td>73</td><td>127</td><td>135</td><td>3.5</td><td>0</td><td>26</td><td>818</td></tr>
+    <tr><td>2026-02-21</td><td>Oulu - Peruskunto</td><td>8.2</td><td>53</td><td>133</td><td>145</td><td>3.6</td><td>0</td><td>40</td><td>628</td></tr>
+    <tr><td>2026-02-16</td><td>Oulu - Peruskunto</td><td>8.2</td><td>56</td><td>133</td><td>144</td><td>3.4</td><td>0</td><td>34</td><td>642</td></tr>
+    <tr><td>2026-02-15</td><td>Oulu - Peruskunto</td><td>7.6</td><td>47</td><td>136</td><td>158</td><td>3.6</td><td>0.4</td><td>22</td><td>580</td></tr>
+    <tr><td>2026-02-14</td><td>Oulu - Pitkä juoksu</td><td>9.9</td><td>63</td><td>135</td><td>145</td><td>3.8</td><td>0</td><td>26</td><td>758</td></tr>
+    <tr><td>2026-02-12</td><td>Treadmill Running</td><td>3.2</td><td>33</td><td>132</td><td>154</td><td>3.0</td><td>1.0</td><td>300</td><td>372</td></tr>
+    <tr><td>2026-02-10</td><td>Treadmill Running</td><td>2.2</td><td>30</td><td>132</td><td>144</td><td>3.1</td><td>0</td><td>360</td><td>356</td></tr>
+    <tr><td>2026-02-09</td><td>Oulu - Kynnys</td><td>6.0</td><td>36</td><td>143</td><td>160</td><td>3.8</td><td>0</td><td>16</td><td>459</td></tr>
+    <tr><td>2026-02-08</td><td>Oulu - Peruskunto</td><td>4.7</td><td>33</td><td>135</td><td>143</td><td>3.0</td><td>0</td><td>15</td><td>381</td></tr>
+    <tr><td>2026-02-04</td><td>Oulu - Kynnys</td><td>8.0</td><td>50</td><td>145</td><td>159</td><td>4.3</td><td>0</td><td>17</td><td>616</td></tr>
+    <tr><td>2026-02-01</td><td>Oulu - Pitkä juoksu</td><td>10.4</td><td>69</td><td>134</td><td>144</td><td>3.7</td><td>0</td><td>30</td><td>813</td></tr>
+    <tr><td>2026-01-31</td><td>Oulu - Pitkä juoksu</td><td>4.7</td><td>31</td><td>136</td><td>145</td><td>3.3</td><td>0</td><td>16</td><td>373</td></tr>
+    <tr><td>2026-01-30</td><td>Treadmill Running</td><td>0.5</td><td>60</td><td>137</td><td>150</td><td>3.8</td><td>0</td><td>630</td><td>692</td></tr>
+    <tr><td>2026-01-28</td><td>Oulu - Kynnys</td><td>7.0</td><td>43</td><td>144</td><td>162</td><td>4.1</td><td>0.3</td><td>22</td><td>549</td></tr>
+    <tr><td>2026-01-27</td><td>Treadmill Running</td><td>0.4</td><td>31</td><td>126</td><td>141</td><td>3.0</td><td>0</td><td>300</td><td>337</td></tr>
+    <tr><td>2026-01-25</td><td>Oulu - Peruskunto</td><td>4.6</td><td>29</td><td>131</td><td>140</td><td>3.3</td><td>0</td><td>26</td><td>361</td></tr>
+    <tr><td>2026-01-24</td><td>Oulu Running</td><td>9.6</td><td>61</td><td>138</td><td>153</td><td>4.1</td><td>0</td><td>23</td><td>756</td></tr>
+    <tr><td>2026-01-21</td><td>Oulu - Peruskunto</td><td>5.9</td><td>36</td><td>138</td><td>151</td><td>3.7</td><td>0</td><td>17</td><td>460</td></tr>
+  </table>
+  </div>
+</div>
+</section>
+
+<!-- =============== OHJELMA =============== -->
+<section id="ohjelma">
+<div class="card" style="margin-bottom:20px">
+  <h2>Harjoitusohjelma — Karhunkierros NUTS 55 km</h2>
+  <p style="color:var(--text-dim);font-size:0.85rem;margin-bottom:16px">Ohjelma päivittyy viikoittain. Klikkaa viikkoa avataksesi yksityiskohdat.</p>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#D9D9D9;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 12 — Hammasoperaatio — tauko</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#D9D9D922">
+      <div class="ohjelma-row">
+        <div>La 21.3.</div>
+        <div>Rauhallinen PK-juoksu 40 min</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Paluu viikon tauon jälkeen</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 21.3.</div>
+        <div>Kävely 12,8 km</div>
+        <div><span class="tyyppi" style="background:#BDD7EE;color:#333">kävely</span></div>
+        <div class="huomio">Pitkä kävelylenkki</div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header open" style="background:#BDD7EE;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 13 — 23.–29.3. — Paluu jatkuu</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body open" style="background:#BDD7EE22">
+      <div class="ohjelma-row">
+        <div>Su 22.3.</div>
+        <div>PK-juoksu 9,4 km</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Aamulenkki, Altra Lone Peak 5</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ma 23.3.</div>
+        <div>✔ Kevyt juoksu 5,6 km / 37 min (HR ka 122, max 140)</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Ensimmäinen API-siirretty harjoitus</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 24.3.</div>
+        <div>✔ Kuntosali + matto 30 min / 18 % / 408m nousua (HR max 155)</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Paasto. Raskasta loppumatkasta.</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 25.3.</div>
+        <div>✔ Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 26.3.</div>
+        <div><s>Kuntosali</s> → ✔ Tiedonkeruu 4.6 km / 39 min (150/175/200 W)</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Sali peruuntui. Kriittinen löydös: kävely ~150 W, hölkkä ~220 W, kuollut alue välissä.</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 27.3.</div>
+        <div>✔ Kävely 1,9 km / 23 min (HR 90)</div>
+        <div><span class="tyyppi" style="background:#BDD7EE;color:#333">kävely</span></div>
+        <div class="huomio">Lepopäivä, kevyt iltalenkki</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 28.3.</div>
+        <div>✔ Kenttätesti 9,6 km / 77 min (HR ka 118, max 148, 203 W)</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">AVAINHARJOITUS ✔ Kestävän hölkän sykeraja kalibroitu: ~130 bpm</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Su 29.3.</div>
+        <div>✔ Polkukävely 9,5 km / 2h 40min (HR ka 80, max 105, 74 W)</div>
+        <div><span class="tyyppi" style="background:#BDD7EE;color:#333">kävely</span></div>
+        <div class="huomio">➕ Sanginsuun luontopolut vaimon kanssa. Teknistä maastoa, palauttava.</div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#F4B183;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 14 — 30.3.–5.4. — Rakennusviikko 1</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#F4B18322">
+      <div class="ohjelma-row">
+        <div>Ma 30.3.</div>
+        <div>Tempo 8–10 km (3 km tempo)</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Kynnysharjoitus</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 31.3.</div>
+        <div>Kuntosali + matto 300m nousua</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Paasto</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 1.4.</div>
+        <div>Lepo tai kävely</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 2.4.</div>
+        <div>Kuntosali + matto 300m nousua</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Paasto</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 3.4.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 4.4.</div>
+        <div>Pitkä lenkki 20–25 km maastossa</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">AVAINHARJOITUS — pisin lenkki</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Su 5.4.</div>
+        <div>Lepo tai kävely</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio">Palautuminen</div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#F4B183;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 15 — 6.–12.4. — Rakennusviikko 2</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#F4B18322">
+      <div class="ohjelma-row">
+        <div>Ma 6.4.</div>
+        <div>VO2max-intervallit 5×3 min</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Viimeinen kova tehoh.</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 7.4.</div>
+        <div>Kuntosali + matto 300–400m</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Paasto, anna kaikkesi</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 8.4.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 9.4.</div>
+        <div>Kuntosali kevyempi + matto 200m</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Paasto, kevennys alkaa</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 10.4.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 11.4.</div>
+        <div>Pitkä juoksu 15–18 km</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Rauhallinen pitkä</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Su 12.4.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#C5E0B4;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 16 — 13.–19.4. — Normaali + Helsinki</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#C5E0B422">
+      <div class="ohjelma-row">
+        <div>Ma 13.4.</div>
+        <div>Juoksu 8–10 km TAI kuntoportaat 30–40 min</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Valitse toinen</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 14.4.</div>
+        <div>Kuntosali + matto 300m</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">3D-skannaus (ei operaatio)</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 15.4.</div>
+        <div>Lepo tai kävely</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 16.4.</div>
+        <div>Helsinki — kävelyä</div>
+        <div><span class="tyyppi" style="background:#BDD7EE;color:#333">kävely</span></div>
+        <div class="huomio">Ooppera</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 17.4.</div>
+        <div>Helsinki — kävelyä</div>
+        <div><span class="tyyppi" style="background:#BDD7EE;color:#333">kävely</span></div>
+        <div class="huomio">Ooppera</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 18.4.</div>
+        <div>Juna kotiin, kävely</div>
+        <div><span class="tyyppi" style="background:#BDD7EE;color:#333">kävely</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Su 19.4.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#FFD966;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 17 — 20.–26.4. — Linssileikkausviikko</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#FFD96622">
+      <div class="ohjelma-row">
+        <div>Ma 20.4.</div>
+        <div>PK-juoksu 8 km</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 21.4.</div>
+        <div>Kuntosali + matto 200m</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Viimeinen sali ennen leikk.</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 22.4.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio">Lepo ennen leikkausta</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 23.4.</div>
+        <div>LINSSILEIKKAUS</div>
+        <div><span class="tyyppi" style="background:#FFC000;color:#333">muu</span></div>
+        <div class="huomio">Lepo ja toipuminen</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 24.4.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 25.4.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Su 26.4.</div>
+        <div>Kevyt kävely</div>
+        <div><span class="tyyppi" style="background:#BDD7EE;color:#333">kävely</span></div>
+        <div class="huomio">Jos olo sallii</div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#B4C7E7;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 18 — 27.4.–3.5. — Palautuminen</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#B4C7E722">
+      <div class="ohjelma-row">
+        <div>Ma 27.4.</div>
+        <div>Kevyt kävely 30–45 min</div>
+        <div><span class="tyyppi" style="background:#BDD7EE;color:#333">kävely</span></div>
+        <div class="huomio">Kysy lääkäriltä juoksulupa</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 28.4.</div>
+        <div>Kuntosali kevyt</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Paasto, mukautettu</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 29.4.</div>
+        <div>Kevyt juoksu 30 min</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Jos lääkäri sallii</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 30.4.</div>
+        <div>Kuntosali kevyt + matto 15 min</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Paasto</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 1.5.</div>
+        <div>Vappu — lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 2.5.</div>
+        <div>Juoksu 8–10 km</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Takaisin juoksun pariin</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Su 3.5.</div>
+        <div>Lepo tai kävely</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#C5E0B4;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 19 — 4.–10.5. — Viimeinen harjoitusviikko</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#C5E0B422">
+      <div class="ohjelma-row">
+        <div>Ma 4.5.</div>
+        <div>Juoksu 8 km + 4×1 min reipas</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Pidä jalat vauhtiin tottum.</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 5.5.</div>
+        <div>Kuntosali normaali + matto</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Viimeinen salikerta</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 6.5.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 7.5.</div>
+        <div>Kevyt juoksu 5–6 km</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Paasto, rennosti</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 8.5.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 9.5.</div>
+        <div>Juoksu 10–12 km, rauhallinen</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Viimeinen pidempi harjoitus</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Su 10.5.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#D6DCE4;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 20 — 11.–17.5. — Kevennys</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#D6DCE422">
+      <div class="ohjelma-row">
+        <div>Ma 11.5.</div>
+        <div>Kevyt juoksu 30 min</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 12.5.</div>
+        <div>Kuntosali kevyt (ylläpito)</div>
+        <div><span class="tyyppi" style="background:#70AD47;color:#fff">sali</span></div>
+        <div class="huomio">Viimeinen sali ennen kisaa</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 13.5.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 14.5.</div>
+        <div>Kevyt juoksu 20–25 min + vedot</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Pidä jalat hereillä</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 15.5.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>La 16.5.</div>
+        <div>Kevyt juoksu 20 min tai kävely</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Su 17.5.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+    </div>
+  </div>
+  <div class="ohjelma-viikko">
+    <div class="ohjelma-header" style="background:#FF6B6B;color:#222" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+      <span>Vko 21 — 18.–22.5. — KILPAILUVIIKKO</span>
+      <span class="arrow">&#9654;</span>
+    </div>
+    <div class="ohjelma-body" style="background:#FF6B6B22">
+      <div class="ohjelma-row">
+        <div>Ma 18.5.</div>
+        <div>Kevyt juoksu 15 min + vedot</div>
+        <div><span class="tyyppi" style="background:#4472C4;color:#fff">juoksu</span></div>
+        <div class="huomio">Herättele jalat</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ti 19.5.</div>
+        <div>Lepo tai 15 min kävely</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Ke 20.5.</div>
+        <div>Lepo</div>
+        <div><span class="tyyppi" style="background:#E8E8E8;color:#666">lepo</span></div>
+        <div class="huomio"></div>
+      </div>
+      <div class="ohjelma-row">
+        <div>To 21.5.</div>
+        <div>Lepo, matka Kuusamoon</div>
+        <div><span class="tyyppi" style="background:#FFC000;color:#333">muu</span></div>
+        <div class="huomio">Varustecheck</div>
+      </div>
+      <div class="ohjelma-row">
+        <div>Pe 22.5.</div>
+        <div>KARHUNKIERROS NUTS 55 km</div>
+        <div><span class="tyyppi" style="background:#FF4444;color:#fff">kilpailu</span></div>
+        <div class="huomio">KILPAILU!</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<div class="updated">Päivitetty 26.03.2026 &bull; Data: Garmin Connect</div>
+
+<script>
+Chart.defaults.color = '#9ca3af';
+Chart.defaults.borderColor = '#2a2d3a';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+
+// --- Kuormituskaavio ---
+new Chart(document.getElementById('loadChart'), {
+  type: 'bar',
+  data: {
+    labels: ["Vko 40", "Vko 41", "Vko 42", "Vko 43", "Vko 44", "Vko 45", "Vko 46", "Vko 47", "Vko 48", "Vko 49", "Vko 50", "Vko 51", "Vko 52", "Vko 2", "Vko 3", "Vko 4", "Vko 5", "Vko 6", "Vko 7", "Vko 8", "Vko 9", "Vko 10", "Vko 11", "Vko 12", "Vko 13", "Vko 14", "Vko 15", "Vko 16", "Vko 17", "Vko 18", "Vko 19", "Vko 20", "Vko 21", "Vko 22", "Vko 23", "Vko 24", "Vko 25", "Vko 26", "Vko 27", "Vko 28", "Vko 29", "Vko 30", "Vko 31"],
+    datasets: [
+      {
+        label: 'Toteutunut Load',
+        data: [28, 102, 453, 22, 41, 168, 95, 591, 503, 698, 487, 342, 110, 213, 324, 430, 642, 256, 642, 358, 449, 438, 396, 228, 348, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        backgroundColor: 'rgba(68,114,196,0.7)',
+        borderColor: '#4472C4',
+        borderWidth: 1,
+        borderRadius: 4,
+        order: 2
+      },
+      {
+        label: 'Suunniteltu Load',
+        data: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 465, 635, 655, 450, 250, 390, 535, 320, 570, 150, 250, 350, 450, 500, 550, 300, 480, 200, 400],
+        type: 'line',
+        borderColor: '#ED7D31',
+        borderWidth: 2,
+        borderDash: [6, 3],
+        pointRadius: 3,
+        pointBackgroundColor: '#ED7D31',
+        fill: false,
+        spanGaps: true,
+        order: 1
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + (c.parsed.y || 0); } } }
+    },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#2a2d3a' } },
+      x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } }
+    }
+  }
+});
+
+// --- Tuntikaavio ---
+new Chart(document.getElementById('hoursChart'), {
+  type: 'bar',
+  data: {
+    labels: ["Vko 40", "Vko 41", "Vko 42", "Vko 43", "Vko 44", "Vko 45", "Vko 46", "Vko 47", "Vko 48", "Vko 49", "Vko 50", "Vko 51", "Vko 52", "Vko 2", "Vko 3", "Vko 4", "Vko 5", "Vko 6", "Vko 7", "Vko 8", "Vko 9", "Vko 10", "Vko 11", "Vko 12", "Vko 13", "Vko 14", "Vko 15", "Vko 16", "Vko 17", "Vko 18", "Vko 19", "Vko 20", "Vko 21", "Vko 22", "Vko 23", "Vko 24", "Vko 25", "Vko 26", "Vko 27", "Vko 28", "Vko 29", "Vko 30", "Vko 31"],
+    datasets: [
+      {
+        label: 'Toteutunut (h)',
+        data: [13.1, 0.7, 1.8, 2.1, 5.4, 1.0, 0.6, 6.2, 7.0, 5.4, 3.5, 5.6, 2.1, 1.2, 7.5, 2.7, 5.3, 1.4, 6.1, 4.0, 4.3, 12.3, 5.4, 7.3, 7.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        backgroundColor: 'rgba(112,173,71,0.7)',
+        borderColor: '#70AD47',
+        borderWidth: 1,
+        borderRadius: 4,
+        order: 2
+      },
+      {
+        label: 'Suunniteltu (h)',
+        data: [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 4.5, 6.0, 5.5, 5.0, 2.5, 3.5, 4.5, 2.5, 10.0, 3.0, 3.5, 4.0, 5.0, 5.5, 6.0, 3.0, 8.0, 2.5, 8.0],
+        type: 'line',
+        borderColor: '#ED7D31',
+        borderWidth: 2,
+        borderDash: [6, 3],
+        pointRadius: 3,
+        pointBackgroundColor: '#ED7D31',
+        fill: false,
+        spanGaps: true,
+        order: 1
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#2a2d3a' } },
+      x: { grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } }
+    }
+  }
+});
+
+// --- Viikkovolyymi (stacked) ---
+new Chart(document.getElementById('volChart'), {
+  type: 'bar',
+  data: {
+    labels: ["Vko 40", "Vko 41", "Vko 42", "Vko 43", "Vko 44", "Vko 45", "Vko 46", "Vko 47", "Vko 48", "Vko 49", "Vko 50", "Vko 51", "Vko 52", "Vko 2", "Vko 3", "Vko 4", "Vko 5", "Vko 6", "Vko 7", "Vko 8", "Vko 9", "Vko 10", "Vko 11", "Vko 12", "Vko 13"],
+    datasets: [
+      {
+        label: 'Juoksu',
+        data: [0, 0.7, 1.4, 0, 0, 1.0, 0.6, 2.3, 2.3, 0.8, 3.5, 2.5, 1.1, 1.2, 2.1, 2.7, 2.4, 1.4, 2.4, 3.0, 2.2, 1.6, 0.8, 1.0, 1.3],
+        backgroundColor: '#4472C4',
+        borderRadius: 2,
+      },
+      {
+        label: 'Juoksumatto',
+        data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.5, 0, 1.1, 0, 1.0, 0, 0.7, 0, 0.5],
+        backgroundColor: '#5B9BD5',
+        borderRadius: 2,
+      },
+      {
+        label: 'Voimaharjoittelu',
+        data: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.2, 0, 1.1, 0, 1.1, 0, 1.2, 0, 0.5],
+        backgroundColor: '#70AD47',
+        borderRadius: 2,
+      },
+      {
+        label: 'Kävely',
+        data: [13.1, 0, 0, 0.5, 5.4, 0, 0, 2.3, 0.7, 0, 0, 3.1, 1.0, 0, 5.4, 0, 0.2, 0, 1.5, 1.0, 0, 2.8, 2.6, 4.2, 0],
+        backgroundColor: '#BDD7EE',
+        borderRadius: 2,
+      },
+      {
+        label: 'Sähköpyörä',
+        data: [0, 0, 0.4, 0, 0, 0, 0, 0, 0.4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2.1, 0.4],
+        backgroundColor: '#A9D18E',
+        borderRadius: 2,
+      },
+      {
+        label: 'Pyöräily',
+        data: [0, 0, 0, 0, 0, 0, 0, 0.5, 2.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        backgroundColor: '#548235',
+        borderRadius: 2,
+      },
+      {
+        label: 'Hiihto',
+        data: [0, 0, 0, 0, 0, 0, 0, 1.1, 1.7, 4.6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1.0, 0, 0, 0],
+        backgroundColor: '#2F5496',
+        borderRadius: 2,
+      },
+      {
+        label: 'Muu',
+        data: [0, 0, 0, 1.6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 6.9, 0, 0, 0],
+        backgroundColor: '#FFC000',
+        borderRadius: 2,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 45, font: { size: 10 } } },
+      y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Tuntia' }, grid: { color: '#2a2d3a' } }
+    }
+  }
+});
+
+// --- Painokäyrä ---
+new Chart(document.getElementById('painoChart'), {
+  type: 'line',
+  data: {
+    labels: ["2025-06-01", "2025-06-02", "2025-06-03", "2025-06-04", "2025-06-05", "2025-06-06", "2025-06-07", "2025-06-08", "2025-06-09", "2025-06-10", "2025-06-11", "2025-06-12", "2025-06-13", "2025-06-14", "2025-06-15", "2025-06-16", "2025-06-17", "2025-06-18", "2025-06-19", "2025-06-20", "2025-06-22", "2025-06-23", "2025-06-24", "2025-06-25", "2025-06-28", "2025-06-29", "2025-06-30", "2025-07-01", "2025-07-02", "2025-07-03", "2025-07-04", "2025-07-05", "2025-07-06", "2025-07-07", "2025-07-08", "2025-07-09", "2025-07-10", "2025-07-17", "2025-07-18", "2025-07-19", "2025-07-20", "2025-07-21", "2025-07-22", "2025-08-04", "2025-08-05", "2025-08-06", "2025-08-07", "2025-08-08", "2025-08-09", "2025-08-10", "2025-08-11", "2025-08-12", "2025-08-13", "2025-08-14", "2025-08-15", "2025-08-16", "2025-08-17", "2025-08-18", "2025-08-19", "2025-08-20", "2025-08-21", "2025-08-22", "2025-08-24", "2025-08-25", "2025-08-26", "2025-08-27", "2025-08-28", "2025-08-29", "2025-08-30", "2025-09-01", "2025-09-02", "2025-09-03", "2025-09-04", "2025-09-05", "2025-09-08", "2025-09-09", "2025-09-10", "2025-09-11", "2025-09-12", "2025-09-13", "2025-09-14", "2025-09-15", "2025-09-17", "2025-09-18", "2025-09-19", "2025-09-20", "2025-09-21", "2025-09-22", "2025-09-23", "2025-09-24", "2025-09-29", "2025-09-30", "2025-10-01", "2025-10-02", "2025-10-06", "2025-10-07", "2025-10-08", "2025-10-09", "2025-10-10", "2025-10-11", "2025-10-12", "2025-10-13", "2025-10-14", "2025-10-15", "2025-10-16", "2025-10-17", "2025-10-18", "2025-10-19", "2025-10-20", "2025-10-21", "2025-10-22", "2025-10-23", "2025-10-24", "2025-10-25", "2025-10-26", "2025-10-27", "2025-10-28", "2025-10-29", "2025-10-30", "2025-10-31", "2025-11-01", "2025-11-02", "2025-11-03", "2025-11-04", "2025-11-05", "2025-11-06", "2025-11-07", "2025-11-08", "2025-11-09", "2025-11-10", "2025-11-11", "2025-11-12", "2025-11-13", "2025-11-17", "2025-11-18", "2025-11-19", "2025-11-20", "2025-11-21", "2025-11-22", "2025-11-23", "2025-11-25", "2025-11-26", "2025-11-27", "2025-11-28", "2025-11-29", "2025-11-30", "2025-12-08", "2025-12-09", "2025-12-10", "2025-12-11", "2025-12-12", "2025-12-13", "2025-12-14", "2025-12-15", "2025-12-16", "2025-12-17", "2025-12-18", "2025-12-19", "2025-12-20", "2025-12-21", "2025-12-22", "2025-12-23", "2025-12-24", "2025-12-26", "2025-12-27", "2025-12-29", "2026-01-02", "2026-01-03", "2026-01-04", "2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-14", "2026-01-15", "2026-01-16", "2026-01-17", "2026-01-18", "2026-01-19", "2026-01-20", "2026-01-21", "2026-01-22", "2026-01-23", "2026-01-24", "2026-01-25", "2026-01-26", "2026-01-27", "2026-01-28", "2026-01-29", "2026-01-30", "2026-01-31", "2026-02-01", "2026-02-02", "2026-02-03", "2026-02-04", "2026-02-06", "2026-02-07", "2026-02-08", "2026-02-09", "2026-02-10", "2026-02-11", "2026-02-12", "2026-02-13", "2026-02-14", "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21", "2026-02-22", "2026-02-23", "2026-02-24", "2026-02-25", "2026-02-26", "2026-02-27", "2026-02-28", "2026-03-01", "2026-03-09", "2026-03-10", "2026-03-11", "2026-03-12", "2026-03-13", "2026-03-14", "2026-03-15", "2026-03-16", "2026-03-17", "2026-03-18", "2026-03-19", "2026-03-20", "2026-03-21", "2026-03-22", "2026-03-23", "2026-03-24", "2026-03-25", "2026-03-26"],
+    datasets: [
+      {
+        label: 'Paino (kg)',
+        data: [77.8, 77.7, 77.8, 77.7, 77.8, 77.4, 77.1, 77.7, 77.6, 77.7, 77.4, 78.0, 77.7, 77.2, 76.5, 77.7, 79.1, 79.3, 79.2, 77.8, 79.3, 79.1, 78.7, 79.0, 78.7, 78.9, 78.2, 77.8, 78.0, 77.8, 77.4, 78.2, 78.2, 78.2, 78.1, 78.1, 78.2, 78.9, 79.2, 78.5, 78.2, 78.2, 78.3, 79.3, 78.8, 77.9, 78.1, 78.2, 78.4, 78.4, 79.1, 79.3, 79.0, 78.2, 78.2, 78.3, 78.1, 78.7, 78.2, 78.1, 78.2, 78.8, 79.8, 78.4, 79.5, 79.3, 78.1, 78.3, 78.5, 80.3, 78.7, 79.5, 80.0, 79.4, 80.5, 79.3, 78.6, 78.7, 78.6, 79.6, 79.2, 78.9, 78.4, 78.6, 79.1, 78.7, 78.8, 79.2, 79.3, 80.0, 80.2, 80.0, 79.7, 79.7, 82.0, 80.2, 79.7, 79.3, 79.3, 79.1, 79.8, 79.9, 80.0, 79.7, 79.6, 78.8, 80.0, 80.1, 80.7, 80.3, 80.2, 80.7, 78.9, 79.5, 79.9, 79.3, 79.2, 80.0, 80.7, 80.4, 80.2, 80.7, 80.0, 80.2, 80.0, 79.9, 80.3, 79.8, 81.3, 80.9, 79.7, 79.9, 80.3, 81.5, 81.2, 80.7, 80.4, 80.0, 79.8, 81.4, 81.2, 80.5, 80.5, 80.6, 81.0, 80.8, 80.3, 80.5, 80.3, 80.5, 80.9, 80.1, 81.0, 81.7, 81.9, 81.6, 81.0, 80.7, 80.1, 80.5, 81.1, 81.1, 81.0, 81.5, 81.0, 81.3, 81.9, 81.9, 82.1, 82.2, 81.4, 81.7, 81.4, 81.7, 82.1, 82.1, 81.8, 81.7, 81.6, 81.5, 80.2, 80.6, 79.5, 80.4, 79.7, 79.9, 80.0, 79.8, 79.3, 78.5, 78.7, 79.3, 79.8, 79.5, 78.7, 79.0, 79.0, 79.2, 79.2, 79.4, 78.0, 78.8, 77.5, 77.8, 78.5, 78.6, 79.0, 78.8, 78.2, 77.1, 77.7, 78.8, 78.9, 78.5, 78.1, 78.4, 76.9, 76.8, 78.1, 77.8, 77.5, 76.3, 77.2, 76.0, 75.9, 77.0, 77.4, 77.3, 75.9, 75.4, 75.0, 76.0, 75.5, 76.8, 75.8, 75.0, 75.3],
+        borderColor: '#4472C4',
+        backgroundColor: 'rgba(68,114,196,0.1)',
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 0,
+        pointHitRadius: 10,
+      },
+      {
+        label: 'Lihasmassa (kg)',
+        data: [31.1, 31.1, 31.1, 31.1, 31.1, 31.0, 30.9, 31.1, 31.1, null, 31.0, 31.2, 31.1, 31.0, 30.8, 31.1, 31.4, 31.5, 31.5, 31.1, 31.5, 31.4, 31.3, 31.4, 31.3, 31.4, 31.2, 31.1, 31.1, 31.1, 31.0, 31.2, 31.2, 31.2, 31.2, 31.2, 31.2, 31.4, 31.5, null, 31.2, 31.2, 31.2, 31.5, 31.4, 31.1, 31.2, 31.2, 31.2, 31.2, null, 31.5, 31.4, null, 31.2, 31.2, 31.2, 31.3, 31.2, null, 31.2, 31.3, null, 31.3, 31.5, 31.5, 31.2, null, 31.3, 31.7, 31.3, 31.5, 31.7, 31.5, 31.8, 31.5, 31.3, 31.3, 31.3, 31.5, 31.4, 31.4, 31.3, 31.3, 31.4, 31.3, 31.4, 31.4, 31.5, 31.6, 31.7, 31.6, 31.6, 31.6, 32.1, 31.7, 31.6, 31.5, 31.5, 31.4, 31.6, 31.6, 31.6, 31.6, 31.5, 31.4, 31.6, 31.7, 31.8, 31.7, 31.7, 31.8, 31.4, 31.5, 31.6, 31.5, 31.4, 31.7, 31.8, 31.7, 31.7, 31.8, 31.7, 31.7, 31.6, 31.6, 31.7, 31.6, 32.0, 31.9, 31.6, 31.6, 31.7, 32.0, 31.9, 31.8, 31.8, 31.7, 31.6, 32.0, 31.9, 31.8, 31.8, 31.8, 31.9, 31.8, null, 31.8, 31.7, 31.8, 31.9, 31.7, 31.9, 32.0, 32.1, 32.0, 31.9, 31.8, 31.7, 31.8, 31.9, 31.9, 31.9, 32.0, 31.9, 32.0, 32.1, 32.1, 32.2, 32.2, 32.0, 32.1, 32.0, 32.0, 32.2, 32.2, 32.1, 32.1, 32.0, 32.0, 31.7, 31.8, 31.5, 31.7, 31.6, 31.6, 31.6, 31.6, 31.5, 31.3, 31.3, 31.5, 31.6, 31.5, 31.3, 31.4, 31.4, 31.4, 31.4, 31.5, 31.2, 31.3, 31.0, 31.1, null, 31.3, 31.4, 31.4, 31.2, 30.9, 31.1, null, 31.4, 31.3, 31.2, 31.3, 30.9, 30.9, 31.2, 31.1, 31.0, 30.7, 31.0, 30.7, 30.6, 30.9, 31.0, 31.0, 30.7, 30.5, 30.4, 30.7, 30.5, 30.9, 30.6, 30.4, 30.5],
+        borderColor: '#70AD47',
+        borderWidth: 1.5,
+        borderDash: [4, 2],
+        fill: false,
+        tension: 0.3,
+        pointRadius: 0,
+        spanGaps: true,
+        yAxisID: 'y1'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { min: 74, max: 83, title: { display: true, text: 'Paino (kg)' }, grid: { color: '#2a2d3a' }, ticks: { stepSize: 1 } },
+      y1: { min: 30, max: 33, position: 'right', title: { display: true, text: 'Lihasmassa (kg)' }, grid: { display: false }, ticks: { stepSize: 0.5 } },
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 20, maxRotation: 45, font: { size: 9 } } }
+    }
+  }
+});
+</script>
+</body>
+</html>
