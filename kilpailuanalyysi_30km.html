@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kilpailuanalyysi — Kaikki 30 km+ juoksut</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --card2: #334155;
+    --txt: #e2e8f0; --txt2: #94a3b8; --accent: #38bdf8;
+    --green: #4ade80; --yellow: #fbbf24; --orange: #fb923c;
+    --red: #f87171; --purple: #a78bfa; --pink: #f472b6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--txt); padding: 24px; line-height: 1.6; }
+  h1 { font-size: 1.8rem; margin-bottom: 4px; color: var(--accent); }
+  h2 { font-size: 1.3rem; margin: 36px 0 16px; color: var(--accent); border-bottom: 1px solid var(--card2); padding-bottom: 8px; }
+  h3 { font-size: 1.1rem; margin: 20px 0 10px; color: var(--txt); }
+  .subtitle { color: var(--txt2); margin-bottom: 24px; font-size: 0.95rem; }
+
+  .race-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .race-card { background: var(--card); border-radius: 12px; padding: 20px; border-left: 4px solid var(--accent); }
+  .race-card.trail { border-left-color: var(--green); }
+  .race-card.road { border-left-color: var(--orange); }
+  .race-card.ultra { border-left-color: var(--purple); }
+  .race-name { font-size: 1.15rem; font-weight: 700; margin-bottom: 2px; }
+  .race-date { color: var(--txt2); font-size: 0.85rem; margin-bottom: 12px; }
+  .race-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat { text-align: center; }
+  .stat-val { font-size: 1.3rem; font-weight: 700; }
+  .stat-label { font-size: 0.75rem; color: var(--txt2); text-transform: uppercase; }
+  .stat-val.green { color: var(--green); }
+  .stat-val.yellow { color: var(--yellow); }
+  .stat-val.orange { color: var(--orange); }
+  .stat-val.red { color: var(--red); }
+  .stat-val.accent { color: var(--accent); }
+  .stat-val.purple { color: var(--purple); }
+
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; }
+  .badge-trail { background: #166534; color: var(--green); }
+  .badge-road { background: #7c2d12; color: var(--orange); }
+  .badge-ultra { background: #4c1d95; color: var(--purple); }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 0.88rem; }
+  th { background: var(--card2); padding: 8px 10px; text-align: left; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  td { padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  tr:hover td { background: rgba(56,189,248,0.05); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .zone-bar-container { display: flex; height: 24px; border-radius: 6px; overflow: hidden; margin: 4px 0; }
+  .zone-bar { display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 600; min-width: 2px; }
+  .z1 { background: #60a5fa; } .z2 { background: #4ade80; } .z3 { background: #fbbf24; } .z4 { background: #fb923c; } .z5 { background: #ef4444; }
+
+  .comparison { background: var(--card); border-radius: 12px; padding: 20px; margin: 20px 0; overflow-x: auto; }
+
+  .insight { background: var(--card); border-radius: 12px; padding: 16px 20px; margin: 12px 0; border-left: 4px solid var(--yellow); }
+  .insight.good { border-left-color: var(--green); }
+  .insight.warn { border-left-color: var(--orange); }
+  .insight.critical { border-left-color: var(--red); }
+  .insight-title { font-weight: 700; margin-bottom: 4px; }
+  .insight p { color: var(--txt2); font-size: 0.9rem; }
+
+  .strategy { background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%); border-radius: 12px; padding: 24px; margin: 20px 0; border: 1px solid rgba(56,189,248,0.3); }
+  .strategy h3 { color: var(--accent); margin-top: 0; }
+
+  .fade-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin: 16px 0; }
+  .fade-card { background: var(--card); border-radius: 10px; padding: 16px; }
+  .fade-card h4 { font-size: 0.95rem; margin-bottom: 8px; }
+  .fade-meter { height: 8px; background: var(--card2); border-radius: 4px; overflow: hidden; margin: 4px 0; }
+  .fade-fill { height: 100%; border-radius: 4px; }
+
+  .seg-table td { font-size: 0.82rem; padding: 5px 8px; }
+  .seg-table th { font-size: 0.82rem; padding: 6px 8px; }
+  .seg-warn { color: var(--red); font-weight: 600; }
+  .seg-ok { color: var(--green); }
+  .seg-mid { color: var(--yellow); }
+
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    .race-grid { grid-template-columns: 1fr; }
+    .race-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<h1>Kilpailuanalyysi — 30 km+ juoksut</h1>
+<p class="subtitle">8 kilpailua · 2023–2025 · Kari Lapinlampi · Yksityiskohtainen analyysi KK55-strategiaa varten</p>
+
+<!-- ============ RACE CARDS ============ -->
+<h2>Kilpailut</h2>
+<div class="race-grid">
+  <div class="race-card trail">
+    <div class="race-name">Karhunkierros NUTS 34 km <span class="badge badge-trail">polku</span></div>
+    <div class="race-date">27.5.2023 · Kuusamo · 35.3 km · Polar Grit X / Strava</div>
+    <div class="race-stats">
+      <div class="stat"><div class="stat-val accent">6h 06min</div><div class="stat-label">aika (elapsed)</div></div>
+      <div class="stat"><div class="stat-val yellow">9:35/km</div><div class="stat-label">tahti</div></div>
+      <div class="stat"><div class="stat-val orange">↑1170 m</div><div class="stat-label">nousu</div></div>
+      <div class="stat"><div class="stat-val">~150 bpm</div><div class="stat-label">ka. syke (arvio)</div></div>
+      <div class="stat"><div class="stat-val purple">— W</div><div class="stat-label">ei tehoa</div></div>
+      <div class="stat"><div class="stat-val">4 122 kcal</div><div class="stat-label">kalorit</div></div>
+    </div>
+  </div>
+  <div class="race-card trail">
+    <div class="race-name">Ylläs–Pallas NUTS <span class="badge badge-trail">polku</span></div>
+    <div class="race-date">8.7.2023 · Kolari · 37.6 km</div>
+    <div class="race-stats">
+      <div class="stat"><div class="stat-val accent">6h 34min</div><div class="stat-label">aika</div></div>
+      <div class="stat"><div class="stat-val yellow">10:29/km</div><div class="stat-label">tahti</div></div>
+      <div class="stat"><div class="stat-val orange">↑1073 m</div><div class="stat-label">nousu</div></div>
+      <div class="stat"><div class="stat-val">143 bpm</div><div class="stat-label">ka. syke</div></div>
+      <div class="stat"><div class="stat-val purple">176 W</div><div class="stat-label">ka. teho</div></div>
+      <div class="stat"><div class="stat-val red">223 W</div><div class="stat-label">norm. teho</div></div>
+    </div>
+  </div>
+  <div class="race-card road">
+    <div class="race-name">Ateenan maraton <span class="badge badge-road">tie</span></div>
+    <div class="race-date">12.11.2023 · Marathon → Ateena · 42.5 km</div>
+    <div class="race-stats">
+      <div class="stat"><div class="stat-val accent">5h 11min</div><div class="stat-label">aika</div></div>
+      <div class="stat"><div class="stat-val yellow">7:19/km</div><div class="stat-label">tahti</div></div>
+      <div class="stat"><div class="stat-val orange">↑322 m</div><div class="stat-label">nousu</div></div>
+      <div class="stat"><div class="stat-val">144 bpm</div><div class="stat-label">ka. syke</div></div>
+      <div class="stat"><div class="stat-val purple">270 W</div><div class="stat-label">ka. teho</div></div>
+      <div class="stat"><div class="stat-val red">289 W</div><div class="stat-label">norm. teho</div></div>
+    </div>
+  </div>
+  <div class="race-card road">
+    <div class="race-name">Hallijuoksu 38 km <span class="badge badge-road">halli</span></div>
+    <div class="race-date">28.1.2024 · Hallijuoksu · 38.3 km</div>
+    <div class="race-stats">
+      <div class="stat"><div class="stat-val accent">4h 46min</div><div class="stat-label">aika</div></div>
+      <div class="stat"><div class="stat-val yellow">7:28/km</div><div class="stat-label">tahti</div></div>
+      <div class="stat"><div class="stat-val orange">↑4 m</div><div class="stat-label">nousu</div></div>
+      <div class="stat"><div class="stat-val">134 bpm</div><div class="stat-label">ka. syke</div></div>
+      <div class="stat"><div class="stat-val purple">250 W</div><div class="stat-label">ka. teho</div></div>
+      <div class="stat"><div class="stat-val red">274 W</div><div class="stat-label">norm. teho</div></div>
+    </div>
+  </div>
+  <div class="race-card trail">
+    <div class="race-name">Karhunkierros NUTS 34 km <span class="badge badge-trail">polku</span></div>
+    <div class="race-date">25.5.2024 · Kuusamo · 36.2 km</div>
+    <div class="race-stats">
+      <div class="stat"><div class="stat-val accent">7h 08min</div><div class="stat-label">aika</div></div>
+      <div class="stat"><div class="stat-val yellow">11:49/km</div><div class="stat-label">tahti</div></div>
+      <div class="stat"><div class="stat-val orange">↑1247 m</div><div class="stat-label">nousu</div></div>
+      <div class="stat"><div class="stat-val">136 bpm</div><div class="stat-label">ka. syke</div></div>
+      <div class="stat"><div class="stat-val purple">159 W</div><div class="stat-label">ka. teho</div></div>
+      <div class="stat"><div class="stat-val red">215 W</div><div class="stat-label">norm. teho</div></div>
+    </div>
+  </div>
+  <div class="race-card road">
+    <div class="race-name">Hallijuoksu 34 km <span class="badge badge-road">halli</span></div>
+    <div class="race-date">9.2.2025 · Sisähalli · 33.6 km</div>
+    <div class="race-stats">
+      <div class="stat"><div class="stat-val accent">3h 59min</div><div class="stat-label">aika</div></div>
+      <div class="stat"><div class="stat-val yellow">7:07/km</div><div class="stat-label">tahti</div></div>
+      <div class="stat"><div class="stat-val orange">↑0 m</div><div class="stat-label">nousu</div></div>
+      <div class="stat"><div class="stat-val">139 bpm</div><div class="stat-label">ka. syke</div></div>
+      <div class="stat"><div class="stat-val purple">261 W</div><div class="stat-label">ka. teho</div></div>
+      <div class="stat"><div class="stat-val red">270 W</div><div class="stat-label">norm. teho</div></div>
+    </div>
+  </div>
+  <div class="race-card ultra">
+    <div class="race-name">Masokistin Unelma <span class="badge badge-ultra">ultra</span></div>
+    <div class="race-date">10.8.2024 · Helsinki · 50.4 km</div>
+    <div class="race-stats">
+      <div class="stat"><div class="stat-val accent">7h 24min</div><div class="stat-label">aika</div></div>
+      <div class="stat"><div class="stat-val yellow">8:48/km</div><div class="stat-label">tahti</div></div>
+      <div class="stat"><div class="stat-val orange">↑519 m</div><div class="stat-label">nousu</div></div>
+      <div class="stat"><div class="stat-val">126 bpm</div><div class="stat-label">ka. syke</div></div>
+      <div class="stat"><div class="stat-val purple">218 W</div><div class="stat-label">ka. teho</div></div>
+      <div class="stat"><div class="stat-val red">261 W</div><div class="stat-label">norm. teho</div></div>
+    </div>
+  </div>
+  <div class="race-card trail">
+    <div class="race-name">Karhunkierros NUTS 34 km <span class="badge badge-trail">polku</span></div>
+    <div class="race-date">24.5.2025 · Kuusamo · 36.2 km</div>
+    <div class="race-stats">
+      <div class="stat"><div class="stat-val accent">6h 33min</div><div class="stat-label">aika</div></div>
+      <div class="stat"><div class="stat-val yellow">10:51/km</div><div class="stat-label">tahti</div></div>
+      <div class="stat"><div class="stat-val orange">↑1224 m</div><div class="stat-label">nousu</div></div>
+      <div class="stat"><div class="stat-val">141 bpm</div><div class="stat-label">ka. syke</div></div>
+      <div class="stat"><div class="stat-val purple">168 W</div><div class="stat-label">ka. teho</div></div>
+      <div class="stat"><div class="stat-val red">215 W</div><div class="stat-label">norm. teho</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ COMPARISON TABLE ============ -->
+<h2>Vertailutaulukko</h2>
+<div class="comparison">
+<table>
+<tr>
+  <th>Kilpailu</th>
+  <th class="num">Matka</th>
+  <th class="num">Aika</th>
+  <th class="num">Tahti</th>
+  <th class="num">↑ Nousu</th>
+  <th class="num">Ka. syke</th>
+  <th class="num">Ka. teho</th>
+  <th class="num">Norm. teho</th>
+  <th class="num">1. puolisko</th>
+  <th class="num">2. puolisko</th>
+  <th class="num">Tehopudotus</th>
+  <th class="num">Nop.muutos</th>
+</tr>
+<tr style="background:rgba(56,189,248,0.05);">
+  <td>KK34 2023 <span style="font-size:0.75rem;color:var(--txt2)">(Polar)</span></td>
+  <td class="num">35.3 km</td><td class="num">6h 06min</td><td class="num">9:35/km</td><td class="num">1 170 m</td>
+  <td class="num">~150</td><td class="num">—</td><td class="num">—</td>
+  <td class="num">8:08/km</td><td class="num">10:58/km</td>
+  <td class="num" style="color:var(--txt2)">ei tehoa</td>
+  <td class="num" style="color:var(--red)">−35%</td>
+</tr>
+<tr>
+  <td>Ylläs–Pallas 2023</td>
+  <td class="num">37.6 km</td><td class="num">6h 34min</td><td class="num">10:29/km</td><td class="num">1 073 m</td>
+  <td class="num">143</td><td class="num">176 W</td><td class="num">223 W</td>
+  <td class="num">251 W</td><td class="num">184 W</td>
+  <td class="num" style="color:var(--red)">−67 W (27%)</td>
+  <td class="num" style="color:var(--red)">−16%</td>
+</tr>
+<tr>
+  <td>Ateena 2023</td>
+  <td class="num">42.5 km</td><td class="num">5h 11min</td><td class="num">7:19/km</td><td class="num">322 m</td>
+  <td class="num">144</td><td class="num">270 W</td><td class="num">289 W</td>
+  <td class="num">310 W</td><td class="num">251 W</td>
+  <td class="num" style="color:var(--orange)">−59 W (19%)</td>
+  <td class="num" style="color:var(--red)">−20%</td>
+</tr>
+<tr>
+  <td>Hallijuoksu 1/2024</td>
+  <td class="num">38.3 km</td><td class="num">4h 46min</td><td class="num">7:28/km</td><td class="num">4 m</td>
+  <td class="num">134</td><td class="num">250 W</td><td class="num">274 W</td>
+  <td class="num">286 W</td><td class="num">265 W</td>
+  <td class="num" style="color:var(--green)">−21 W (7%)</td>
+  <td class="num" style="color:var(--green)">−5%</td>
+</tr>
+<tr>
+  <td>KK34 2024</td>
+  <td class="num">36.2 km</td><td class="num">7h 08min</td><td class="num">11:49/km</td><td class="num">1 247 m</td>
+  <td class="num">136</td><td class="num">159 W</td><td class="num">215 W</td>
+  <td class="num">237 W</td><td class="num">172 W</td>
+  <td class="num" style="color:var(--red)">−65 W (27%)</td>
+  <td class="num" style="color:var(--red)">−31%</td>
+</tr>
+<tr style="background:rgba(74,222,128,0.08);">
+  <td>Hallijuoksu 2/2025</td>
+  <td class="num">33.6 km</td><td class="num">3h 59min</td><td class="num">7:07/km</td><td class="num">0 m</td>
+  <td class="num">139</td><td class="num">261 W</td><td class="num">270 W</td>
+  <td class="num">254 W</td><td class="num">284 W</td>
+  <td class="num" style="color:var(--green)">+30 W (neg.split!)</td>
+  <td class="num" style="color:var(--green)">+14%</td>
+</tr>
+<tr>
+  <td>Masokistin Unelma 2024</td>
+  <td class="num">50.4 km</td><td class="num">7h 24min</td><td class="num">8:48/km</td><td class="num">519 m</td>
+  <td class="num">126</td><td class="num">218 W</td><td class="num">261 W</td>
+  <td class="num">306 W</td><td class="num">184 W</td>
+  <td class="num" style="color:var(--red)">−123 W (40%)</td>
+  <td class="num" style="color:var(--red)">−30%</td>
+</tr>
+<tr style="font-weight:700; background:rgba(56,189,248,0.1);">
+  <td>KK34 2025</td>
+  <td class="num">36.2 km</td><td class="num">6h 33min</td><td class="num">10:51/km</td><td class="num">1 224 m</td>
+  <td class="num">141</td><td class="num">168 W</td><td class="num">215 W</td>
+  <td class="num">240 W</td><td class="num">177 W</td>
+  <td class="num" style="color:var(--red)">−63 W (26%)</td>
+  <td class="num" style="color:var(--red)">−28%</td>
+</tr>
+</table>
+</div>
+
+<!-- ============ FADE COMPARISON ============ -->
+<h2>Tehopudotus ja nopeuden hiipuminen</h2>
+<p style="color:var(--txt2); margin-bottom:16px; font-size:0.9rem;">Vertailu ensimmäisen ja toisen puoliskon välillä. Pieni pudotus = hyvin toteutettu kisa. Yli 20 % pudotus = liian kovaa alussa.</p>
+
+<div class="fade-grid">
+  <div class="fade-card">
+    <h4 style="color:var(--red)">KK34 2023 — Nopein, mutta sama ongelma</h4>
+    <div style="font-size:0.85rem; color:var(--txt2); margin-bottom:8px;">35.3 km, ↑1170m · Polar Grit X · Nopeuspudotus −35 %</div>
+    <div style="font-size:0.8rem;">Tahti (1. → 2. puolisko)</div>
+    <div class="fade-meter"><div class="fade-fill" style="width:65%; background:var(--red);"></div></div>
+    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--txt2);"><span>8:08/km</span><span>10:58/km</span></div>
+    <div style="font-size:0.8rem; margin-top:6px;">Viim. 7 km: 90 min @ 12:15/km. HR Z4+Z5: 37 % — liian kova polkulle.</div>
+    <div style="font-size:0.8rem; margin-top:4px;">Nopein KK34 (6h 06min) mutta huono strategia: 80 % ajasta Z3+Z4.</div>
+  </div>
+
+  <div class="fade-card">
+    <h4 style="color:var(--green)">Hallijuoksu 1/2024 — Paras toteutus</h4>
+    <div style="font-size:0.85rem; color:var(--txt2); margin-bottom:8px;">38.3 km, hallijuoksu · Tehopudotus −7 %, nopeuspudotus −5 %</div>
+    <div style="font-size:0.8rem;">Teho (1. → 2. puolisko)</div>
+    <div class="fade-meter"><div class="fade-fill" style="width:93%; background:var(--green);"></div></div>
+    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--txt2);"><span>286 W</span><span>265 W</span></div>
+    <div style="font-size:0.8rem; margin-top:6px;">Stamina: 70 % → 33 % (loppui hallitusti)</div>
+  </div>
+
+  <div class="fade-card">
+    <h4 style="color:var(--orange)">Ateena maraton 2023 — Kohtuullinen fade</h4>
+    <div style="font-size:0.85rem; color:var(--txt2); margin-bottom:8px;">42.5 km, mäkinen · Tehopudotus −19 %, nopeuspudotus −20 %</div>
+    <div style="font-size:0.8rem;">Teho (1. → 2. puolisko)</div>
+    <div class="fade-meter"><div class="fade-fill" style="width:81%; background:var(--orange);"></div></div>
+    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--txt2);"><span>310 W</span><span>251 W</span></div>
+    <div style="font-size:0.8rem; margin-top:6px;">Stamina: 100 % → 1 % (loppui 20 km kohdalla!)</div>
+  </div>
+
+  <div class="fade-card">
+    <h4 style="color:var(--green)">Hallijuoksu 2/2025 — Negatiivinen splitti!</h4>
+    <div style="font-size:0.85rem; color:var(--txt2); margin-bottom:8px;">33.6 km, halli · Tehonousu +12 %, nopeusnousu +14 %</div>
+    <div style="font-size:0.8rem;">Teho (1. → 2. puolisko)</div>
+    <div class="fade-meter"><div class="fade-fill" style="width:100%; background:var(--green);"></div></div>
+    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--txt2);"><span>254 W</span><span>284 W ↑</span></div>
+    <div style="font-size:0.8rem; margin-top:6px;">Stamina: 85 % → 28 % (hallittu lasku, ei romahdusta)</div>
+  </div>
+
+  <div class="fade-card">
+    <h4 style="color:var(--red)">KK34 2025 — Tyypillinen polkufade</h4>
+    <div style="font-size:0.85rem; color:var(--txt2); margin-bottom:8px;">36.2 km, ↑1224m · Tehopudotus −26 %, nopeuspudotus −28 %</div>
+    <div style="font-size:0.8rem;">Teho (1. → 2. puolisko)</div>
+    <div class="fade-meter"><div class="fade-fill" style="width:74%; background:var(--red);"></div></div>
+    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--txt2);"><span>240 W</span><span>177 W</span></div>
+    <div style="font-size:0.8rem; margin-top:6px;">Stamina: 99 % → 26 % (käännekohta 20 km / 45 %)</div>
+  </div>
+
+  <div class="fade-card">
+    <h4 style="color:var(--red)">Masokistin Unelma 2024 — Suurin absoluuttinen fade</h4>
+    <div style="font-size:0.85rem; color:var(--txt2); margin-bottom:8px;">50.4 km, helppo maasto · Tehopudotus −40 %, nopeuspudotus −30 %</div>
+    <div style="font-size:0.8rem;">Teho (1. → 2. puolisko)</div>
+    <div class="fade-meter"><div class="fade-fill" style="width:60%; background:var(--red);"></div></div>
+    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--txt2);"><span>306 W</span><span>184 W</span></div>
+    <div style="font-size:0.8rem; margin-top:6px;">Stamina: 99 % → 2 % (alkoi 306 W — aivan liian kovaa!)</div>
+  </div>
+</div>
+
+<!-- ============ SEGMENT ANALYSIS ALL RACES ============ -->
+<h2>5 km lohkoanalyysi — kaikki kilpailut</h2>
+
+<!-- KK34 2023 (Strava) -->
+<h3>KK34 2023 · 35.3 km · ↑1170 m <span style="color:var(--txt2); font-size:0.85rem;">(Polar Grit X / Strava — ei tehoa)</span></h3>
+<div class="comparison">
+<table class="seg-table">
+<tr><th>Lohko</th><th class="num">Tahti</th><th class="num">Syke (arvio)</th><th class="num">↑m</th><th>Huomio</th></tr>
+<tr><td>0–17.5 km (1. puolisko)</td><td class="num seg-ok">8:08/km</td><td class="num">~148</td><td class="num">~550</td><td style="font-size:0.8rem;color:var(--yellow)">Nopein KK34-aloitus kolmesta vuodesta</td></tr>
+<tr><td>17.5–28 km (2. puolisko alku)</td><td class="num">~10:00/km</td><td class="num">~155</td><td class="num">~400</td><td style="font-size:0.8rem;color:var(--orange)">Hidastuminen alkaa, kovat nousut</td></tr>
+<tr style="background:rgba(239,68,68,0.1);"><td><strong>28–35.3 km (viim. 7 km)</strong></td><td class="num seg-warn">12:15/km</td><td class="num">~145</td><td class="num">~220</td><td style="font-size:0.8rem;color:var(--red)"><strong>90 min viimeiseen 7 km!</strong> Konttainen→Valtavaara→Ruka</td></tr>
+</table>
+<p style="color:var(--txt2); font-size:0.82rem; margin-top:8px;">
+  <strong>Sää:</strong> 9°C, pilvinen, kosteus 40%, tuuli 15.8 km/h lännestä · <strong>Relative Effort:</strong> 494 (Historic) · <strong>Kalorit:</strong> 4 122 kcal<br>
+  <strong>HR-jakauma:</strong> Z1 0.8% · Z2 18.3% · Z3 44.1% · Z4 36.7% · Z5 0.2% — yhteensä <strong>80.8 % ajasta Z3+Z4</strong><br>
+  <strong>Pace Distribution (GAP):</strong> Z1 Recovery 96% ajasta — polkumaasto hitaampaa kuin GAP antaisi ymmärtää<br>
+  <strong>Tahti-fade:</strong> 8:08/km → 10:58/km = <strong>−35 %</strong> · Viim. 7 km: 90 min @ 12:15/km (vrt. 2025: 102 min @ 14:40/km, 2024: ei erillistä dataa)
+</p>
+</div>
+
+<!-- Ylläs-Pallas -->
+<h3>Ylläs–Pallas NUTS 2023 · 37.6 km · ↑1073 m</h3>
+<div class="comparison">
+<table class="seg-table">
+<tr><th>Lohko</th><th class="num">Tahti</th><th class="num">Syke</th><th class="num">Teho</th><th class="num">↑m</th><th class="num">↓m</th><th class="num">Stamina</th><th>Huomio</th></tr>
+<tr><td>0–5 km</td><td class="num">8:35</td><td class="num">144</td><td class="num seg-warn">246 W</td><td class="num">179</td><td class="num">28</td><td class="num">99→78%</td><td style="font-size:0.8rem;color:var(--yellow)">Alkuinnostus — iso nousu, liian kovaa</td></tr>
+<tr><td>5–10 km</td><td class="num">6:47</td><td class="num">152</td><td class="num seg-warn">272 W</td><td class="num">40</td><td class="num">92</td><td class="num">78→59%</td><td style="font-size:0.8rem;color:var(--red)">Kovin lohko! Nopein tahti ja korkein teho</td></tr>
+<tr><td>10–15 km</td><td class="num">7:01</td><td class="num">150</td><td class="num seg-warn">265 W</td><td class="num">62</td><td class="num">132</td><td class="num">59→40%</td><td style="font-size:0.8rem;color:var(--red)">Edelleen liian kovaa, stamina sulaa</td></tr>
+<tr style="background:rgba(251,191,36,0.1);"><td><strong>15–20 km</strong></td><td class="num">13:10</td><td class="num">148</td><td class="num seg-mid">222 W</td><td class="num">475</td><td class="num">103</td><td class="num">40→18%</td><td style="font-size:0.8rem;color:var(--orange)"><strong>Seinä!</strong> Valtava nousu, stamina romahtaa</td></tr>
+<tr><td>20–25 km</td><td class="num">8:42</td><td class="num">146</td><td class="num">189 W</td><td class="num">34</td><td class="num">412</td><td class="num">18→1%</td><td style="font-size:0.8rem;color:var(--red)">Stamina loppuu. Pitkä laskuosuus pelastaa tahdin</td></tr>
+<tr><td>25–30 km</td><td class="num">11:59</td><td class="num">145</td><td class="num">197 W</td><td class="num">300</td><td class="num">96</td><td class="num">1→1%</td><td style="font-size:0.8rem">Pelkkää tahtoa — stamina pohjissa</td></tr>
+<tr><td>30–35 km</td><td class="num">10:54</td><td class="num">122</td><td class="num seg-ok">140 W</td><td class="num">35</td><td class="num">245</td><td class="num">1→1%</td><td style="font-size:0.8rem">Syke tippuu, keho säästää</td></tr>
+<tr><td>35–37.6 km</td><td class="num">8:42</td><td class="num">132</td><td class="num">211 W</td><td class="num">18</td><td class="num">25</td><td class="num">1→1%</td><td style="font-size:0.8rem">Loppukiri maaliin</td></tr>
+</table>
+</div>
+
+<!-- Athens -->
+<h3>Ateenan maraton 2023 · 42.5 km · ↑322 m</h3>
+<div class="comparison">
+<table class="seg-table">
+<tr><th>Lohko</th><th class="num">Tahti</th><th class="num">Syke</th><th class="num">Teho</th><th class="num">↑m</th><th class="num">↓m</th><th class="num">Stamina</th><th>Huomio</th></tr>
+<tr><td>0–5 km</td><td class="num">5:52</td><td class="num">143</td><td class="num seg-warn">321 W</td><td class="num">2</td><td class="num">29</td><td class="num">100→77%</td><td style="font-size:0.8rem;color:var(--red)">321 W! Aivan liian kova aloitus</td></tr>
+<tr><td>5–10 km</td><td class="num">6:21</td><td class="num">150</td><td class="num seg-warn">307 W</td><td class="num">21</td><td class="num">12</td><td class="num">77→54%</td><td style="font-size:0.8rem;color:var(--red)">Edelleen &gt;300 W</td></tr>
+<tr><td>10–15 km</td><td class="num">6:38</td><td class="num">152</td><td class="num seg-warn">307 W</td><td class="num">56</td><td class="num">14</td><td class="num">54→30%</td><td style="font-size:0.8rem;color:var(--red)">Stamina jo alle 50 % — vaara!</td></tr>
+<tr style="background:rgba(239,68,68,0.1);"><td><strong>15–20 km</strong></td><td class="num">6:50</td><td class="num">152</td><td class="num seg-warn">307 W</td><td class="num">66</td><td class="num">58</td><td class="num">30→6%</td><td style="font-size:0.8rem;color:var(--red)"><strong>Stamina romahtaa</strong> — 4 lohkoa &gt;300 W putkeen</td></tr>
+<tr><td>20–25 km</td><td class="num">7:51</td><td class="num">151</td><td class="num">277 W</td><td class="num">96</td><td class="num">7</td><td class="num">6→1%</td><td style="font-size:0.8rem">Iso nousu, teho laskee pakon edessä</td></tr>
+<tr><td>25–30 km</td><td class="num">8:02</td><td class="num">144</td><td class="num">258 W</td><td class="num">72</td><td class="num">20</td><td class="num">1→1%</td><td style="font-size:0.8rem">Pohjissa, mutta pysyy liikkeessä</td></tr>
+<tr><td>30–35 km</td><td class="num">8:21</td><td class="num">133</td><td class="num">233 W</td><td class="num">48</td><td class="num">63</td><td class="num">1→1%</td><td style="font-size:0.8rem">Syke tippunut, tahti hidastunut</td></tr>
+<tr><td>35–40 km</td><td class="num">8:01</td><td class="num">132</td><td class="num">232 W</td><td class="num">12</td><td class="num">75</td><td class="num">1→1%</td><td style="font-size:0.8rem">Laskuosuus auttaa pitämään tahdin</td></tr>
+<tr><td>40–42.5 km</td><td class="num">7:34</td><td class="num">136</td><td class="num">254 W</td><td class="num">5</td><td class="num">40</td><td class="num">1→1%</td><td style="font-size:0.8rem">Loppukiri!</td></tr>
+</table>
+</div>
+
+<!-- Training run -->
+<h3>Hallijuoksu 1/2024 · 38.3 km · sisähalli</h3>
+<div class="comparison">
+<table class="seg-table">
+<tr><th>Lohko</th><th class="num">Tahti</th><th class="num">Syke</th><th class="num">Teho</th><th class="num">↑m</th><th class="num">↓m</th><th class="num">Stamina</th><th>Huomio</th></tr>
+<tr><td>0–5 km</td><td class="num">6:42</td><td class="num">134</td><td class="num">281 W</td><td class="num">8</td><td class="num">13</td><td class="num">70→53%</td><td style="font-size:0.8rem">Aloitus 70 % staminalla — ei täysin levännyt?</td></tr>
+<tr><td>5–10 km</td><td class="num">6:32</td><td class="num">137</td><td class="num">288 W</td><td class="num">12</td><td class="num">12</td><td class="num">53→45%</td><td style="font-size:0.8rem;color:var(--green)">Tasaista</td></tr>
+<tr><td>10–15 km</td><td class="num">6:34</td><td class="num">136</td><td class="num">287 W</td><td class="num">8</td><td class="num">9</td><td class="num">45→41%</td><td style="font-size:0.8rem;color:var(--green)">Tasaista</td></tr>
+<tr><td>15–20 km</td><td class="num">6:31</td><td class="num">138</td><td class="num">289 W</td><td class="num">10</td><td class="num">11</td><td class="num">41→36%</td><td style="font-size:0.8rem;color:var(--green)">Tasaista — nopein lohko!</td></tr>
+<tr><td>20–25 km</td><td class="num">6:33</td><td class="num">140</td><td class="num">287 W</td><td class="num">10</td><td class="num">12</td><td class="num">36→34%</td><td style="font-size:0.8rem;color:var(--green)">Stamina tasaantunut</td></tr>
+<tr><td>25–30 km</td><td class="num">6:32</td><td class="num">138</td><td class="num">288 W</td><td class="num">12</td><td class="num">12</td><td class="num">34→33%</td><td style="font-size:0.8rem;color:var(--green)">Kuin kone</td></tr>
+<tr><td>30–35 km</td><td class="num">6:37</td><td class="num">135</td><td class="num">284 W</td><td class="num">11</td><td class="num">14</td><td class="num">33→33%</td><td style="font-size:0.8rem;color:var(--green)">Vielä tasaista!</td></tr>
+<tr><td>35–38.3 km</td><td class="num">8:19</td><td class="num">117</td><td class="num">203 W</td><td class="num">9</td><td class="num">14</td><td class="num">33→34%</td><td style="font-size:0.8rem">Jäähdyttely/kävely loppumatkasta</td></tr>
+</table>
+</div>
+
+<!-- Hallijuoksu 2/2025 -->
+<h3>Hallijuoksu 2/2025 · 33.6 km · sisähalli</h3>
+<div class="comparison">
+<table class="seg-table">
+<tr><th>Lohko</th><th class="num">Tahti</th><th class="num">Syke</th><th class="num">Teho</th><th class="num">Stamina</th><th>Huomio</th></tr>
+<tr><td>0–5 km</td><td class="num">7:35</td><td class="num">125</td><td class="num seg-ok">248 W</td><td class="num">85→75%</td><td style="font-size:0.8rem;color:var(--green)">Rauhallinen aloitus!</td></tr>
+<tr><td>5–10 km</td><td class="num">7:20</td><td class="num">127</td><td class="num seg-ok">255 W</td><td class="num">75→71%</td><td style="font-size:0.8rem;color:var(--green)">Tasaista, syke matala</td></tr>
+<tr><td>10–15 km</td><td class="num">7:15</td><td class="num">131</td><td class="num">259 W</td><td class="num">71→68%</td><td style="font-size:0.8rem;color:var(--green)">Pieni kiihdytys</td></tr>
+<tr><td>15–20 km</td><td class="num">7:00</td><td class="num">136</td><td class="num">266 W</td><td class="num">68→60%</td><td style="font-size:0.8rem;color:var(--green)">Tahti kiihtyy, stamina hallinnassa</td></tr>
+<tr><td>20–25 km</td><td class="num">6:33</td><td class="num">151</td><td class="num">281 W</td><td class="num">60→50%</td><td style="font-size:0.8rem">Selvä kiihdytys — syke nousee</td></tr>
+<tr><td>25–30 km</td><td class="num">6:19</td><td class="num">158</td><td class="num seg-warn">291 W</td><td class="num">50→37%</td><td style="font-size:0.8rem">Kova veto, mutta hallinnassa</td></tr>
+<tr><td>30–33.6 km</td><td class="num">6:10</td><td class="num">156</td><td class="num seg-warn">299 W</td><td class="num">37→28%</td><td style="font-size:0.8rem;color:var(--accent)"><strong>Kovin lohko lopussa!</strong> Neg. splitti</td></tr>
+</table>
+</div>
+
+<!-- KK34 2024 -->
+<h3>KK34 2024 · 36.2 km · ↑1247 m</h3>
+<div class="comparison">
+<table class="seg-table">
+<tr><th>Lohko</th><th class="num">Tahti</th><th class="num">Syke</th><th class="num">Teho</th><th class="num">↑m</th><th class="num">↓m</th><th class="num">Stamina</th><th>Huomio</th></tr>
+<tr><td>0–5 km</td><td class="num">9:30</td><td class="num">139</td><td class="num">216 W</td><td class="num">137</td><td class="num">184</td><td class="num">99→84%</td><td style="font-size:0.8rem">Maltillinen alku, hyvä!</td></tr>
+<tr><td>5–10 km</td><td class="num">8:19</td><td class="num">150</td><td class="num seg-warn">263 W</td><td class="num">155</td><td class="num">97</td><td class="num">84→67%</td><td style="font-size:0.8rem;color:var(--red)">Liian kova! Syke nousee, teho piikissä</td></tr>
+<tr><td>10–15 km</td><td class="num">8:35</td><td class="num">142</td><td class="num seg-warn">246 W</td><td class="num">111</td><td class="num">89</td><td class="num">67→51%</td><td style="font-size:0.8rem;color:var(--orange)">Kova tahti jatkuu</td></tr>
+<tr style="background:rgba(251,191,36,0.1);"><td><strong>15–20 km</strong></td><td class="num">10:03</td><td class="num">143</td><td class="num">224 W</td><td class="num">166</td><td class="num">66</td><td class="num">51→34%</td><td style="font-size:0.8rem;color:var(--orange)"><strong>Käännekohta</strong> — stamina alle kolmasosan</td></tr>
+<tr><td>20–25 km</td><td class="num">10:56</td><td class="num">135</td><td class="num">188 W</td><td class="num">139</td><td class="num">160</td><td class="num">34→17%</td><td style="font-size:0.8rem">Teho tippunut, hidastelu alkaa</td></tr>
+<tr><td>25–30 km</td><td class="num">14:13</td><td class="num">131</td><td class="num seg-ok">170 W</td><td class="num">310</td><td class="num">212</td><td class="num">17→1%</td><td style="font-size:0.8rem">Stamina nollissa, vaikea maasto</td></tr>
+<tr><td>30–35 km</td><td class="num">14:56</td><td class="num">125</td><td class="num seg-ok">134 W</td><td class="num">245</td><td class="num">328</td><td class="num">1→1%</td><td style="font-size:0.8rem">Enimmäkseen kävelyä</td></tr>
+<tr><td>35–36.2 km</td><td class="num">13:14</td><td class="num">132</td><td class="num">196 W</td><td class="num">81</td><td class="num">76</td><td class="num">1→1%</td><td style="font-size:0.8rem">Maaliin asti</td></tr>
+</table>
+</div>
+
+<!-- Masokistin Unelma -->
+<h3>Masokistin Unelma 2024 · 50.4 km · ↑519 m</h3>
+<div class="comparison">
+<table class="seg-table">
+<tr><th>Lohko</th><th class="num">Tahti</th><th class="num">Syke</th><th class="num">Teho</th><th class="num">↑m</th><th class="num">↓m</th><th class="num">Stamina</th><th>Huomio</th></tr>
+<tr><td>0–5 km</td><td class="num">6:33</td><td class="num">138</td><td class="num seg-warn">320 W</td><td class="num">58</td><td class="num">47</td><td class="num">99→81%</td><td style="font-size:0.8rem;color:var(--red)">320 W! Sama alkuvirhe kuin Ateenassa</td></tr>
+<tr><td>5–10 km</td><td class="num">6:49</td><td class="num">137</td><td class="num seg-warn">307 W</td><td class="num">53</td><td class="num">62</td><td class="num">81→72%</td><td style="font-size:0.8rem;color:var(--red)">Edelleen &gt;300 W</td></tr>
+<tr><td>10–15 km</td><td class="num">6:54</td><td class="num">137</td><td class="num seg-warn">307 W</td><td class="num">73</td><td class="num">72</td><td class="num">72→63%</td><td style="font-size:0.8rem;color:var(--red)">Kolmas &gt;300 W lohko putkeen</td></tr>
+<tr><td>15–20 km</td><td class="num">6:59</td><td class="num">142</td><td class="num seg-warn">304 W</td><td class="num">84</td><td class="num">84</td><td class="num">63→53%</td><td style="font-size:0.8rem;color:var(--orange)">Stamina lähenee 50 % rajaa</td></tr>
+<tr><td>20–25 km</td><td class="num">7:09</td><td class="num">142</td><td class="num">294 W</td><td class="num">81</td><td class="num">81</td><td class="num">53→41%</td><td style="font-size:0.8rem">Pieni hidastuminen alkaa</td></tr>
+<tr style="background:rgba(251,191,36,0.1);"><td><strong>25–30 km</strong></td><td class="num">8:34</td><td class="num">130</td><td class="num">227 W</td><td class="num">60</td><td class="num">60</td><td class="num">41→32%</td><td style="font-size:0.8rem;color:var(--orange)"><strong>Käännekohta</strong> — teho putoaa 70 W:lla</td></tr>
+<tr><td>30–35 km</td><td class="num">8:04</td><td class="num">132</td><td class="num">252 W</td><td class="num">57</td><td class="num">58</td><td class="num">32→22%</td><td style="font-size:0.8rem">Yrittää vielä nostaa tahtia</td></tr>
+<tr><td>35–40 km</td><td class="num">9:19</td><td class="num">119</td><td class="num">205 W</td><td class="num">58</td><td class="num">52</td><td class="num">22→14%</td><td style="font-size:0.8rem">Hidastuminen selkeää</td></tr>
+<tr><td>40–45 km</td><td class="num">10:23</td><td class="num">115</td><td class="num seg-ok">173 W</td><td class="num">55</td><td class="num">61</td><td class="num">14→7%</td><td style="font-size:0.8rem">Kävely-juoksu -vaihtelua</td></tr>
+<tr><td>45–50 km</td><td class="num">12:28</td><td class="num">102</td><td class="num seg-ok">126 W</td><td class="num">75</td><td class="num">71</td><td class="num">7→3%</td><td style="font-size:0.8rem">Lähes pelkkää kävelyä</td></tr>
+<tr><td>50–50.4 km</td><td class="num">12:14</td><td class="num">95</td><td class="num seg-ok">117 W</td><td class="num">3</td><td class="num">4</td><td class="num">3→2%</td><td style="font-size:0.8rem">Maali</td></tr>
+</table>
+</div>
+
+<!-- KK34 2025 -->
+<h3>KK34 2025 · 36.2 km · ↑1224 m</h3>
+<div class="comparison">
+<table class="seg-table">
+<tr><th>Lohko</th><th class="num">Tahti</th><th class="num">Syke</th><th class="num">Teho</th><th class="num">↑m</th><th class="num">↓m</th><th class="num">Stamina</th><th>Huomio</th></tr>
+<tr><td>0–5 km</td><td class="num">8:57</td><td class="num">136</td><td class="num">221 W</td><td class="num">131</td><td class="num">178</td><td class="num">99→78%</td><td style="font-size:0.8rem;color:var(--yellow)">Alkuinnostus — parempi kuin 2024, mutta silti liikaa</td></tr>
+<tr><td>5–10 km</td><td class="num">8:05</td><td class="num">152</td><td class="num seg-warn">249 W</td><td class="num">148</td><td class="num">92</td><td class="num">78→66%</td><td style="font-size:0.8rem;color:var(--red)">Kovin lohko</td></tr>
+<tr><td>10–15 km</td><td class="num">7:55</td><td class="num">145</td><td class="num seg-warn">250 W</td><td class="num">108</td><td class="num">88</td><td class="num">66→57%</td><td style="font-size:0.8rem;color:var(--red)">Nopein lohko, edelleen kovaa</td></tr>
+<tr><td>15–20 km</td><td class="num">8:40</td><td class="num">155</td><td class="num seg-warn">240 W</td><td class="num">165</td><td class="num">62</td><td class="num">57→45%</td><td style="font-size:0.8rem;color:var(--orange)">Korkein syke, nouseva osuus</td></tr>
+<tr style="background:rgba(251,191,36,0.1);"><td><strong>20–25 km</strong></td><td class="num">9:56</td><td class="num">145</td><td class="num">194 W</td><td class="num">135</td><td class="num">159</td><td class="num">45→40%</td><td style="font-size:0.8rem;color:var(--orange)"><strong>Käännekohta</strong></td></tr>
+<tr><td>25–30 km</td><td class="num">12:50</td><td class="num">135</td><td class="num seg-ok">173 W</td><td class="num">305</td><td class="num">206</td><td class="num">40→33%</td><td style="font-size:0.8rem">Vaikea maasto, paljon nousua</td></tr>
+<tr><td>30–35 km</td><td class="num">13:07</td><td class="num">131</td><td class="num seg-ok">160 W</td><td class="num">270</td><td class="num">325</td><td class="num">33→28%</td><td style="font-size:0.8rem">Väsynyt, eteneminen jatkuu</td></tr>
+<tr><td>35–36.2 km</td><td class="num">11:12</td><td class="num">130</td><td class="num">181 W</td><td class="num">53</td><td class="num">74</td><td class="num">28→26%</td><td style="font-size:0.8rem">Loppukiri maaliin</td></tr>
+</table>
+</div>
+
+<!-- ============ HR ZONE COMPARISON ============ -->
+<h2>Sykejakaumat (HR-alueet)</h2>
+<p style="color:var(--txt2); margin-bottom:16px; font-size:0.9rem;">Sykealueet kertovat, kuinka kovalla fysiologisella kuormituksella kilpailu ajettiin. Ideaali ultrassa: mahdollisimman vähän Z4–Z5-aikaa.</p>
+
+<div style="margin-bottom: 24px;">
+  <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:12px; font-size:0.8rem;">
+    <span><span style="display:inline-block;width:12px;height:12px;background:#60a5fa;border-radius:2px;"></span> Z1 Palautus</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:#4ade80;border-radius:2px;"></span> Z2 Peruskestävyys</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:#fbbf24;border-radius:2px;"></span> Z3 Aerobinen</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:#fb923c;border-radius:2px;"></span> Z4 Kynnys</span>
+    <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:2px;"></span> Z5 Maksimi</span>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <div style="font-size:0.85rem; margin-bottom:2px;">KK34 2023 <span style="color:var(--txt2)">(Polar/Strava)</span> <span style="color:var(--txt2)">· 35.3 km · Z4+Z5: <strong style="color:var(--orange)">37%</strong></span></div>
+    <div class="zone-bar-container">
+      <div class="zone-bar z1" style="width:0.8%"></div>
+      <div class="zone-bar z2" style="width:18.3%">18%</div>
+      <div class="zone-bar z3" style="width:44.1%">44%</div>
+      <div class="zone-bar z4" style="width:36.7%">37%</div>
+      <div class="zone-bar z5" style="width:0.2%"></div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <div style="font-size:0.85rem; margin-bottom:2px;">Ylläs–Pallas 2023 <span style="color:var(--txt2)">· 37.6 km · Z4+Z5: <strong style="color:var(--red)">66%</strong></span></div>
+    <div class="zone-bar-container">
+      <div class="zone-bar z1" style="width:0.4%"></div>
+      <div class="zone-bar z2" style="width:9.9%">10%</div>
+      <div class="zone-bar z3" style="width:24.0%">24%</div>
+      <div class="zone-bar z4" style="width:59.5%">60%</div>
+      <div class="zone-bar z5" style="width:6.2%">6%</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <div style="font-size:0.85rem; margin-bottom:2px;">Ateena maraton 2023 <span style="color:var(--txt2)">· 42.5 km · Z4+Z5: <strong style="color:var(--red)">62%</strong></span></div>
+    <div class="zone-bar-container">
+      <div class="zone-bar z1" style="width:0.1%"></div>
+      <div class="zone-bar z2" style="width:2.4%"></div>
+      <div class="zone-bar z3" style="width:35.1%">35%</div>
+      <div class="zone-bar z4" style="width:59.9%">60%</div>
+      <div class="zone-bar z5" style="width:2.5%"></div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <div style="font-size:0.85rem; margin-bottom:2px;">Hallijuoksu 1/2024 <span style="color:var(--txt2)">· 38.3 km · Z4+Z5: <strong style="color:var(--yellow)">16%</strong></span></div>
+    <div class="zone-bar-container">
+      <div class="zone-bar z1" style="width:1.8%"></div>
+      <div class="zone-bar z2" style="width:8.0%">8%</div>
+      <div class="zone-bar z3" style="width:74.7%">75%</div>
+      <div class="zone-bar z4" style="width:15.5%">16%</div>
+      <div class="zone-bar z5" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <div style="font-size:0.85rem; margin-bottom:2px;">Hallijuoksu 2/2025 <span style="color:var(--txt2)">· 33.6 km · Z4+Z5: <strong style="color:var(--orange)">44%</strong></span></div>
+    <div class="zone-bar-container">
+      <div class="zone-bar z1" style="width:0.8%"></div>
+      <div class="zone-bar z2" style="width:4.9%"></div>
+      <div class="zone-bar z3" style="width:50.4%">50%</div>
+      <div class="zone-bar z4" style="width:34.5%">35%</div>
+      <div class="zone-bar z5" style="width:9.4%">9%</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <div style="font-size:0.85rem; margin-bottom:2px;">KK34 2024 <span style="color:var(--txt2)">· 36.2 km · Z4+Z5: <strong style="color:var(--orange)">43%</strong></span></div>
+    <div class="zone-bar-container">
+      <div class="zone-bar z1" style="width:1.4%"></div>
+      <div class="zone-bar z2" style="width:19.0%">19%</div>
+      <div class="zone-bar z3" style="width:36.1%">36%</div>
+      <div class="zone-bar z4" style="width:42.8%">43%</div>
+      <div class="zone-bar z5" style="width:0.6%"></div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <div style="font-size:0.85rem; margin-bottom:2px;">Masokistin Unelma 2024 <span style="color:var(--txt2)">· 50.4 km · Z4+Z5: <strong style="color:var(--green)">14%</strong></span></div>
+    <div class="zone-bar-container">
+      <div class="zone-bar z1" style="width:18.4%">18%</div>
+      <div class="zone-bar z2" style="width:19.6%">20%</div>
+      <div class="zone-bar z3" style="width:48.6%">49%</div>
+      <div class="zone-bar z4" style="width:13.5%">14%</div>
+      <div class="zone-bar z5" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <div style="font-size:0.85rem; margin-bottom:2px;">KK34 2025 <span style="color:var(--txt2)">· 36.2 km · Z4+Z5: <strong style="color:var(--red)">59%</strong></span></div>
+    <div class="zone-bar-container">
+      <div class="zone-bar z1" style="width:1.7%"></div>
+      <div class="zone-bar z2" style="width:7.0%">7%</div>
+      <div class="zone-bar z3" style="width:32.2%">32%</div>
+      <div class="zone-bar z4" style="width:45.0%">45%</div>
+      <div class="zone-bar z5" style="width:14.0%">14%</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STAMINA PATTERNS ============ -->
+<h2>Stamina-käyrät — käännekohdat</h2>
+<p style="color:var(--txt2); margin-bottom:16px; font-size:0.9rem;">Jokaisessa kilpailussa on käännekohta, jossa stamina putoaa alle kriittisen rajan ja tahti romahtaa. Taulukko näyttää, missä kohdassa tämä tapahtui.</p>
+
+<div class="comparison">
+<table>
+<tr>
+  <th>Kilpailu</th>
+  <th class="num">Alku-stamina</th>
+  <th class="num">Stamina<br>puolivälissä</th>
+  <th class="num">Käännekohta<br>(stamina &lt; 40%)</th>
+  <th class="num">Loppu-stamina</th>
+  <th>Vaikutus</th>
+</tr>
+<tr style="background:rgba(56,189,248,0.05);">
+  <td>KK34 2023 <span style="font-size:0.75rem;color:var(--txt2)">(Polar)</span></td>
+  <td class="num">—</td>
+  <td class="num">—</td>
+  <td class="num">—</td>
+  <td class="num">—</td>
+  <td style="font-size:0.8rem;">Ei stamina-dataa (Polar). Tahti-fade −35 %, viim. 7 km 12:15/km → sama kuvio kuin muissa.</td>
+</tr>
+<tr>
+  <td>Ylläs–Pallas 2023</td>
+  <td class="num">99%</td>
+  <td class="num seg-warn">18% (20 km)</td>
+  <td class="num seg-warn">~12 km</td>
+  <td class="num seg-warn">1%</td>
+  <td style="font-size:0.8rem;">Romahdus jo 15–20 km — viimeiset 17 km 1%:lla</td>
+</tr>
+<tr>
+  <td>Ateena 2023</td>
+  <td class="num">100%</td>
+  <td class="num seg-warn">6% (20 km)</td>
+  <td class="num seg-warn">~13 km</td>
+  <td class="num seg-warn">1%</td>
+  <td style="font-size:0.8rem;">4 × 300W+ lohkoa alussa → stamina loppu 20 km kohdalla</td>
+</tr>
+<tr style="background:rgba(74,222,128,0.08);">
+  <td>Hallijuoksu 1/2024</td>
+  <td class="num">70%</td>
+  <td class="num seg-ok">36% (20 km)</td>
+  <td class="num seg-ok">~5 km</td>
+  <td class="num seg-ok">34%</td>
+  <td style="font-size:0.8rem;color:var(--green)"><strong>Ei romahdusta!</strong> Stamina tasaantui 33%:iin ja pysyi</td>
+</tr>
+<tr>
+  <td>KK34 2024</td>
+  <td class="num">99%</td>
+  <td class="num seg-warn">34% (18 km)</td>
+  <td class="num seg-warn">~15 km</td>
+  <td class="num seg-warn">1%</td>
+  <td style="font-size:0.8rem;">263 W piikki 5–10 km → stamina loppuun 25 km</td>
+</tr>
+<tr style="background:rgba(74,222,128,0.08);">
+  <td>Hallijuoksu 2/2025</td>
+  <td class="num">85%</td>
+  <td class="num seg-ok">50% (25 km)</td>
+  <td class="num seg-ok">ei käännekohtaa</td>
+  <td class="num seg-ok">28%</td>
+  <td style="font-size:0.8rem;color:var(--green)"><strong>Neg. splitti!</strong> Aloitus 248 W → loppu 299 W. Hallittu lasku.</td>
+</tr>
+<tr>
+  <td>Masokistin Unelma 2024</td>
+  <td class="num">99%</td>
+  <td class="num seg-mid">41% (25 km)</td>
+  <td class="num seg-mid">~23 km</td>
+  <td class="num seg-warn">2%</td>
+  <td style="font-size:0.8rem;">306 W alussa, mutta tasaisempi maasto → myöhäisempi fade</td>
+</tr>
+<tr style="background:rgba(56,189,248,0.08);">
+  <td>KK34 2025</td>
+  <td class="num">99%</td>
+  <td class="num seg-mid">45% (20 km)</td>
+  <td class="num seg-mid">~18 km</td>
+  <td class="num">26%</td>
+  <td style="font-size:0.8rem;">Parempi kuin 2024 — mutta alkuvauhti silti 240 W</td>
+</tr>
+</table>
+</div>
+
+<!-- Stamina-vertailukaavio -->
+<div class="comparison" style="margin-top:24px;">
+<h3 style="margin-top:0;">Stamina-käyrät — kaikki kilpailut samassa kuvassa</h3>
+<p style="color:var(--txt2); font-size:0.85rem; margin-bottom:16px;">X-akseli: suorituksen eteneminen (%). Punainen katkoviiva = kriittinen 40 % raja. Hallijuoksut (tasainen alusta) vs. kilpailut (kova alku) näyttävät selkeän eron.</p>
+<div style="position:relative; width:100%;"><canvas id="staminaChart" height="300"></canvas></div>
+</div>
+
+<script>
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#334155';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+new Chart(document.getElementById('staminaChart'), {
+  type: 'line',
+  data: {
+    labels: ['0%','5%','10%','15%','20%','25%','30%','35%','40%','45%','50%','55%','60%','65%','70%','75%','80%','85%','90%','95%','100%'],
+    datasets: [
+      {
+        label: 'YP 2023 (6h 35min)',
+        data: [99,91,80,68,59,48,37,32,26,23,17,8,3,1,1,1,1,1,1,1,1],
+        borderColor: '#4ade80', borderWidth: 2, pointRadius: 0, tension: 0.3
+      },
+      {
+        label: 'Ateena 2023 (5h 12min)',
+        data: [100,87,76,64,53,42,30,20,9,1,1,1,1,1,1,1,1,1,1,1,1],
+        borderColor: '#fb923c', borderWidth: 2, pointRadius: 0, tension: 0.3
+      },
+      {
+        label: 'Halli 1/2024 (4h 50min)',
+        data: [70,61,55,51,47,45,43,41,39,37,35,35,34,33,33,33,32,33,33,34,34],
+        borderColor: '#38bdf8', borderWidth: 2.5, pointRadius: 0, tension: 0.3,
+        borderDash: [8, 4]
+      },
+      {
+        label: 'KK34 2024 (7h 8min)',
+        data: [99,94,86,76,69,64,55,47,39,33,27,23,16,10,6,4,1,1,1,1,1],
+        borderColor: '#f87171', borderWidth: 2, pointRadius: 0, tension: 0.3
+      },
+      {
+        label: 'Masok. Unelma 2024 (7h 24min)',
+        data: [99,85,77,72,67,62,55,48,41,35,32,27,22,17,14,11,8,6,5,4,2],
+        borderColor: '#a78bfa', borderWidth: 2, pointRadius: 0, tension: 0.3
+      },
+      {
+        label: 'Halli 2/2025 (4h 0min)',
+        data: [85,80,77,76,74,73,72,71,69,68,67,66,62,59,55,51,46,42,38,33,28],
+        borderColor: '#22d3ee', borderWidth: 2.5, pointRadius: 0, tension: 0.3,
+        borderDash: [8, 4]
+      },
+      {
+        label: 'KK34 2025 (6h 33min)',
+        data: [99,92,83,76,70,65,62,57,53,44,41,41,40,37,36,34,33,31,30,28,26],
+        borderColor: '#fbbf24', borderWidth: 2.5, pointRadius: 0, tension: 0.3
+      },
+      {
+        label: 'Kriittinen raja 40%',
+        data: Array(21).fill(40),
+        borderColor: 'rgba(248,113,113,0.5)', borderWidth: 1.5, pointRadius: 0,
+        borderDash: [4, 4], fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'line' } },
+      tooltip: {
+        callbacks: {
+          label: function(c) {
+            return c.dataset.label + ': ' + c.parsed.y + '%';
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        min: 0, max: 100,
+        title: { display: true, text: 'Stamina %' },
+        grid: { color: '#334155' },
+        ticks: { stepSize: 10 }
+      },
+      x: {
+        title: { display: true, text: 'Suorituksen eteneminen' },
+        grid: { display: false }
+      }
+    }
+  }
+});
+</script>
+
+<!-- ============ KEY INSIGHTS ============ -->
+<h2>Keskeiset havainnot</h2>
+
+<div class="insight critical">
+  <div class="insight-title">Jokaisessa kilpailussa alkuvauhti on ollut liian kova</div>
+  <p>Data on kiistaton: ensimmäiset 10–15 km menevät aina liian kovalla teholla. Ateena ja Masokistin Unelma alkoivat 306–321 W:lla, polkukilpailut 216–263 W:lla. Jokaisessa tapauksessa stamina on romahtanut liian aikaisin. Poikkeukset ovat molemmat hallijuoksut, joissa olosuhteet mahdollistivat tasaisen tehon.</p>
+</div>
+
+<div class="insight good">
+  <div class="insight-title">Hallijuoksut todistavat: oikea annostelu toimii</div>
+  <p><strong>Hallijuoksu 1/2024:</strong> Tasainen ~285 W koko 38 km, tehopudotus vain −7 %, stamina vakautui 33 %:iin. <strong>Hallijuoksu 2/2025:</strong> Negatiivinen splitti! Aloitus 248 W → loppu 299 W, stamina laski hallitusti 85 % → 28 %. Molemmat todistivat, että keho löytää kestävän tasapainon — kunhan alkuvauhti on oikea. Hallin tasaiset olosuhteet (ei tuulta, mäkiä, maastonvaihtelua) eivät vastaa polkukilpailua, mutta periaate on sama: <strong>aloita maltilla, anna varaa nostaa</strong>.</p>
+</div>
+
+<div class="insight warn">
+  <div class="insight-title">Polkukilpailujen tehopiikit kuluttavat staminaa eri tavalla kuin tasainen juoksu</div>
+  <p>KK34 2025: ka. teho 168 W mutta normaaliteho 215 W. Ero on 47 W — se tarkoittaa isoja piikkejä nousuissa ja matalaa tehoa laskuissa. Tämä epätasainen kuormitus kuluttaa staminaa nopeammin kuin tasainen teho. Sen vuoksi <strong>polulla wattikatto pitää asettaa alemmas</strong> kuin tasaisella.</p>
+</div>
+
+<div class="insight">
+  <div class="insight-title">KK34 kolmen vuoden kehityskaari: 2023 → 2024 → 2025</div>
+  <p>
+    <strong>2023:</strong> 6h 06min (5h 39min liikkuen), 9:35/km, ↑1170m, Polar — nopein aika mutta suurin fade (−35%).<br>
+    <strong>2024:</strong> 7h 08min, 11:49/km, ↑1247m — huonoin suoritus, +62 min hitaampi kuin 2023.<br>
+    <strong>2025:</strong> 6h 33min, 10:51/km, ↑1224m — 35 min nopeampi kuin 2024, stamina 26% lopussa.<br>
+    <strong>Viim. 7 km vertailu:</strong> 2023: 90 min (12:15/km) vs 2025: 102 min (14:40/km). Vuonna 2023 oli parempi kunto mutta sama taktinen virhe. Vuonna 2025 parempi stamina (26% vs tyhjä), mutta hitaampi loppu — osin kuormasta, osin varovaisuudesta. <strong>KK55:llä oikea strategia yhdistää 2023:n kunnon 2025:n loppuvoimaan.</strong>
+  </p>
+</div>
+
+<!-- ============ KK55 STRATEGY ============ -->
+<h2>Mitä tämä tarkoittaa KK55:lle</h2>
+
+<div class="strategy">
+  <h3>Avainluvut datasta → KK55-suunnitelma <span style="color:var(--txt2); font-size:0.8rem;">(päivitetty 26.3. tiedonkeruulenkin pohjalta)</span></h3>
+
+  <div class="insight good" style="margin:16px 0;">
+    <div class="insight-title">Tiedonkeruulenkki 26.3. — kävely/hölkkä -kynnys</div>
+    <p>Kriittinen löydös: kävely (~150 W) ja hölkkä (~220 W) ovat kaksi erillistä liiketilaa. Välissä "kuollut alue" (160–210 W) on luonnoton ja tehoton. Wattikatto ei toimi sellaisenaan — jokainen hölkkäaskel on jo ~220 W. Strategia perustuu kävely/hölkkä-vuorotteluun ja sykkeen seurantaan.</p>
+  </div>
+
+  <table style="margin:16px 0;">
+  <tr><th>Liiketila</th><th>Teho</th><th>Tahti</th><th>Syke</th><th>KK55-käyttö</th></tr>
+  <tr style="background:rgba(74,222,128,0.08);">
+    <td>Kävely</td><td>~130–150 W</td><td>~10:00/km</td><td>~95</td>
+    <td style="color:var(--green)"><strong>Nousut, raskas maasto, väsyneenä</strong></td>
+  </tr>
+  <tr style="background:rgba(239,68,68,0.08);">
+    <td>Kuollut alue</td><td>160–210 W</td><td>9:00–9:30/km</td><td>~100</td>
+    <td style="color:var(--red)">ÄLÄ YRITÄ — luonnoton ja tehoton</td>
+  </tr>
+  <tr style="background:rgba(56,189,248,0.08);">
+    <td><strong>Kevyt hölkkä</strong></td><td><strong>~220 W</strong></td><td><strong>~8:15/km</strong></td><td><strong>~110</strong></td>
+    <td style="color:var(--accent)"><strong>Tasaiset ja laskut — "jäähdyttelytuntuma"</strong></td>
+  </tr>
+  <tr>
+    <td>Reipas juoksu</td><td>250+ W</td><td>&lt; 7:15/km</td><td>120+</td>
+    <td style="color:var(--red)">Liian kovaa ultralle</td>
+  </tr>
+  </table>
+
+  <table style="margin:16px 0;">
+  <tr><th>Havainto datasta</th><th>KK55-sääntö</th></tr>
+  <tr>
+    <td>Kävely/hölkkä-hyppäys: 150 W → 220 W, ei tasaista siirtymää</td>
+    <td style="color:var(--green)"><strong>Nousuissa kävele, tasaisilla hölkkää</strong> — ei "hitasta juoksua"</td>
+  </tr>
+  <tr>
+    <td>Kevyt hölkkä: 220 W, 8:15/km, HR 107 — ei rasittanut</td>
+    <td style="color:var(--green)"><strong>Syke pääohjausmittari: HR &lt; 130</strong>, piikit max 145</td>
+  </tr>
+  <tr>
+    <td>Käännekohta aina kun stamina &lt; 40%</td>
+    <td style="color:var(--green)"><strong>Stamina &gt; 50% puolivälissä</strong> (27.5 km)</td>
+  </tr>
+  <tr>
+    <td>Ensimmäiset 15 km rauhallisesti → rasva-aineenvaihdunta käyntiin</td>
+    <td style="color:var(--green)"><strong>Ensimmäiset 15 km pääosin kävelyä + kevyttä hölkkää</strong></td>
+  </tr>
+  <tr>
+    <td>Km 48–55 (Konttainen→Ruka): ~100 min kävelyä riippumatta strategiasta</td>
+    <td style="color:var(--green)"><strong>Reserviä viimeiselle 7 km:lle</strong> — kaikki ennen on valmistautumista</td>
+  </tr>
+  </table>
+
+  <h3 style="margin-top:24px;">Aikaikkuna-skenaariot <span style="color:var(--txt2); font-size:0.8rem;">(kävely/hölkkä-vuorottelulla)</span></h3>
+  <table style="margin:16px 0;">
+  <tr><th>Skenaario</th><th>Liikkumistapa km 0–48</th><th>Ka. teho</th><th>Tahti</th><th>Aika 0–48</th><th>+ Viim. 7 km</th><th>Yhteensä</th></tr>
+  <tr style="background:rgba(74,222,128,0.1);">
+    <td>Varovainen</td>
+    <td>Paljon kävelyä, hölkkää tasaisilla</td>
+    <td>~165 W</td><td>~10:30/km</td><td>~8h 24min</td><td>~1h 40min</td>
+    <td style="color:var(--green)"><strong>~10h 04min</strong></td>
+  </tr>
+  <tr style="background:rgba(56,189,248,0.15); font-weight:600;">
+    <td>Optimaalinen</td>
+    <td>Kävele nousut, hölkkää muut</td>
+    <td>~175 W</td><td>~10:00/km</td><td>~8h 00min</td><td>~1h 40min</td>
+    <td style="color:var(--accent)"><strong>~9h 40min</strong></td>
+  </tr>
+  <tr style="background:rgba(251,191,36,0.1);">
+    <td>Aggressiivinen</td>
+    <td>Hölkkää paljon, kävele vain jyrkimmät</td>
+    <td>~185 W</td><td>~9:15/km</td><td>~7h 24min</td><td>~1h 40min</td>
+    <td style="color:var(--orange)"><strong>~9h 04min</strong></td>
+  </tr>
+  </table>
+
+  <div style="margin:16px 0; padding:16px; background:rgba(0,0,0,0.2); border-radius:8px;">
+    <p style="color:var(--accent); font-weight:700; margin-bottom:8px;">Suositus: Optimaalinen skenaario — kävele nousut, hölkkää tasaisilla, seuraa sykettä</p>
+    <p style="color:var(--txt2); font-size:0.9rem;">Tiedonkeruulenkki osoitti, että kevyt hölkkä (~220 W, 8:15/km, HR 107) tuntuu helpolta eikä rasita. Kävely/hölkkä-vuorottelulla keskiteho asettuu luontevasti ~175 W:iin. HR &lt; 130 pääohjausmittarina. Tavoiteaika ~9h 40min – 10h.</p>
+  </div>
+</div>
+
+<p style="color:var(--txt2); font-size:0.8rem; margin-top:32px; text-align:center;">Raportti generoitu 24.3.2026, päivitetty 26.3.2026 · Data: Garmin Connect (7 kilpailua) + Strava/Polar (KK34 2023) + tiedonkeruulenkki 26.3. · Analyysi: Claude</p>
+
+</body>
+</html>
