@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tempoharjoitus 30.03.2026 — Analyysi</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a;
+    --text: #e4e4e7; --dim: #9ca3af;
+    --blue: #4472C4; --orange: #ED7D31; --green: #70AD47;
+    --red: #FF6B6B; --yellow: #FFC000; --purple: #9B59B6;
+    --warmup-color: #70AD47; --active-color: #ED7D31; --cooldown-color: #4472C4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; padding: 20px;
+    max-width: 1400px; margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.8rem; margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--orange), var(--red));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--dim); font-size: 0.9rem; margin-bottom: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 1.15rem; margin-bottom: 12px; color: var(--text); }
+  .card h3 { font-size: 1rem; margin: 16px 0 8px; color: var(--dim); }
+  .grid { display: grid; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .metric {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; text-align: center;
+  }
+  .metric .label { font-size: 0.8rem; color: var(--dim); margin-bottom: 4px; }
+  .metric .value { font-size: 1.6rem; font-weight: 700; }
+  .metric .detail { font-size: 0.75rem; color: var(--dim); margin-top: 2px; }
+  .chart-container { position: relative; height: 300px; margin: 10px 0; }
+  .chart-container.tall { height: 380px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+  th { color: var(--dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+  td:first-child, th:first-child { text-align: left; }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .badge-warmup { background: var(--warmup-color); color: #000; }
+  .badge-active { background: var(--active-color); color: #fff; }
+  .badge-cooldown { background: var(--cooldown-color); color: #fff; }
+  .insight {
+    border-left: 3px solid var(--orange); padding: 12px 16px;
+    margin: 12px 0; background: rgba(237,125,49,0.08); border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+  }
+  .insight.green { border-left-color: var(--green); background: rgba(112,173,71,0.08); }
+  .insight.red { border-left-color: var(--red); background: rgba(255,107,107,0.08); }
+  .insight.blue { border-left-color: var(--blue); background: rgba(68,114,196,0.08); }
+  .insight strong { color: var(--text); }
+  .phase-legend {
+    display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 4px;
+    font-size: 0.8rem; color: var(--dim);
+  }
+  .phase-legend span {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .phase-dot {
+    width: 10px; height: 10px; border-radius: 3px; display: inline-block;
+  }
+  .scroll-table { overflow-x: auto; }
+  .compare-row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .compare-col { flex: 1; min-width: 280px; }
+</style>
+</head>
+<body>
+
+<h1>Tempoharjoitus — kynnysanalyysi</h1>
+<p class="subtitle">Maanantai 30.3.2026 — Oulu, pyörätie — 9,5 km / 65 min — Viikko 14: Rakennusviikko 1</p>
+
+<!-- Yleiset metriikat -->
+<div class="grid grid-4">
+  <div class="metric">
+    <div class="label">Matka</div>
+    <div class="value">9,5 <span style="font-size:0.9rem">km</span></div>
+    <div class="detail">Tasainen pyörätie, Oulu</div>
+  </div>
+  <div class="metric">
+    <div class="label">Kesto</div>
+    <div class="value">1:05 <span style="font-size:0.9rem">h</span></div>
+    <div class="detail">65 min kokonaisaika</div>
+  </div>
+  <div class="metric">
+    <div class="label">Keskim. syke</div>
+    <div class="value" style="color:var(--blue)">124 <span style="font-size:0.9rem">bpm</span></div>
+    <div class="detail">Max 142 bpm</div>
+  </div>
+  <div class="metric">
+    <div class="label">Keskim. teho</div>
+    <div class="value" style="color:var(--orange)">258 <span style="font-size:0.9rem">W</span></div>
+    <div class="detail">Norm. teho 270 W</div>
+  </div>
+  <div class="metric">
+    <div class="label">Keskim. tahti</div>
+    <div class="value" style="color:var(--green)">6:53 <span style="font-size:0.9rem">/km</span></div>
+    <div class="detail">Koko harjoitus (sis. jäähdyttely)</div>
+  </div>
+  <div class="metric">
+    <div class="label">Stamina lopussa</div>
+    <div class="value" style="color:var(--yellow)">62 <span style="font-size:0.9rem">%</span></div>
+    <div class="detail">100% &rarr; 62% (kulutus 38%)</div>
+  </div>
+  <div class="metric">
+    <div class="label">Harjoitustuntuma</div>
+    <div class="value" style="color:var(--green)">75 <span style="font-size:0.9rem">/100</span></div>
+    <div class="detail">RPE 50/100 — "sopiva"</div>
+  </div>
+  <div class="metric">
+    <div class="label">Compliance</div>
+    <div class="value" style="color:var(--green)">94 <span style="font-size:0.9rem">%</span></div>
+    <div class="detail">Harjoitus toteutui suunnitelman mukaan</div>
+  </div>
+</div>
+
+<!-- Vaiheanalyysi -->
+<div class="card">
+  <h2>Harjoituksen vaiheet</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Harjoitus koostui kolmesta selkeästä vaiheesta: lämmittely, tempo-osio ja jäähdyttely. Suunnitelma oli 8–10 km tempoharjoitus, jossa 3 km kynnöstahtia (~5:50/km). Garmin autodetect tunnisti kävely/juoksuosuudet: 23 juoksupätkää + 24 kävelypätkää.
+  </p>
+
+  <div class="chart-container tall">
+    <canvas id="phaseChart"></canvas>
+  </div>
+  <div class="phase-legend">
+    <span><span class="phase-dot" style="background:rgba(112,173,71,0.6)"></span> Lämmittely (15 min)</span>
+    <span><span class="phase-dot" style="background:rgba(237,125,49,0.6)"></span> Tempo-osio (20 min)</span>
+    <span><span class="phase-dot" style="background:rgba(68,114,196,0.6)"></span> Jäähdyttely (30 min)</span>
+  </div>
+
+  <h3>Vaiheittainen yhteenveto</h3>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Vaihe</th><th>Matka</th><th>Kesto</th><th>Tahti</th><th>Keskim. HR</th><th>Max HR</th><th>Keskim. teho</th><th>Norm. teho</th><th>Askelpituus</th></tr>
+    <tr style="background:rgba(112,173,71,0.08)">
+      <td><span class="badge badge-warmup">LÄMMITTELY</span></td>
+      <td>2,41 km</td><td>15:00</td><td>6:14/km</td><td>125</td><td>134</td><td>291 W</td><td>295 W</td><td>99,3 cm</td>
+    </tr>
+    <tr style="background:rgba(237,125,49,0.08)">
+      <td><span class="badge badge-active">TEMPO</span></td>
+      <td>3,32 km</td><td>20:00</td><td>6:02/km</td><td>132</td><td>142</td><td>296 W</td><td>296 W</td><td>99,2 cm</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.08)">
+      <td><span class="badge badge-cooldown">JÄÄHDYTTELY</span></td>
+      <td>3,78 km</td><td>30:23</td><td>8:02/km</td><td>117</td><td>131</td><td>216 W</td><td>228 W</td><td>87,8 cm</td>
+    </tr>
+    <tr style="font-weight:700">
+      <td>Yhteensä</td>
+      <td>9,51 km</td><td>65:23</td><td>6:53/km</td><td>124</td><td>142</td><td>258 W</td><td>270 W</td><td>94,0 cm</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="insight green">
+    <strong>&#10004; Hyvin toteutettu harjoitus.</strong> Compliance-score 94 % kertoo, että suunnitelman rajat pidettiin.
+    Tempo-osion 20 min (3,3 km) vastasi suunniteltua 3 km kynnösosiota. Tahti 6:02/km oli hieman hitaampi kuin
+    suunnitelman ~5:50/km, mutta <strong>tämä on hyvä asia</strong>: kenttätestin perusteella HR 130+ on jo tempoa eikä kestävää tasoa.
+    Harjoituksen todellinen tarkoitus — kynnysalueen ärsyke — toteutui erinomaisesti.
+  </div>
+</div>
+
+<!-- Lapi-analyysi -->
+<div class="card">
+  <h2>Kilometrilapit</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    12 lapin erittely. Lapit 1–3 = lämmittely, 4–7 = tempo-osio (ACTIVE), 8–12 = jäähdyttely.
+  </p>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Lap</th><th>Tyyppi</th><th>Matka</th><th>Kesto</th><th>Tahti</th><th>Keskim. HR</th><th>Max HR</th><th>Teho</th><th>Norm. teho</th><th>Compliance</th></tr>
+    <tr style="background:rgba(112,173,71,0.08)">
+      <td>1</td><td><span class="badge badge-warmup">WARM</span></td><td>1,00 km</td><td>6:13</td><td>6:13/km</td><td>121</td><td>134</td><td>290 W</td><td>300 W</td><td>89%</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.08)">
+      <td>2</td><td><span class="badge badge-warmup">WARM</span></td><td>1,00 km</td><td>6:16</td><td>6:16/km</td><td>127</td><td>132</td><td>291 W</td><td>291 W</td><td>94%</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.08)">
+      <td>3</td><td><span class="badge badge-warmup">WARM</span></td><td>0,41 km</td><td>2:31</td><td>6:11/km</td><td>127</td><td>131</td><td>293 W</td><td>295 W</td><td>95%</td>
+    </tr>
+    <tr style="background:rgba(237,125,49,0.12)">
+      <td>4</td><td><span class="badge badge-active">TEMPO</span></td><td>1,00 km</td><td>5:51</td><td>5:51/km</td><td style="color:var(--orange)">131</td><td>137</td><td>300 W</td><td>300 W</td><td>87%</td>
+    </tr>
+    <tr style="background:rgba(237,125,49,0.12)">
+      <td>5</td><td><span class="badge badge-active">TEMPO</span></td><td>1,00 km</td><td>6:06</td><td>6:06/km</td><td style="color:var(--orange)">132</td><td>137</td><td>290 W</td><td>291 W</td><td>93%</td>
+    </tr>
+    <tr style="background:rgba(237,125,49,0.12)">
+      <td>6</td><td><span class="badge badge-active">TEMPO</span></td><td>1,00 km</td><td>6:02</td><td>6:02/km</td><td style="color:var(--red)">135</td><td style="color:var(--red)">142</td><td>298 W</td><td>298 W</td><td>92%</td>
+    </tr>
+    <tr style="background:rgba(237,125,49,0.12)">
+      <td>7</td><td><span class="badge badge-active">TEMPO</span></td><td>0,32 km</td><td>2:02</td><td>6:21/km</td><td style="color:var(--orange)">131</td><td>134</td><td>297 W</td><td>300 W</td><td>91%</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.08)">
+      <td>8</td><td><span class="badge badge-cooldown">COOL</span></td><td>1,00 km</td><td>8:03</td><td>8:03/km</td><td>119</td><td>131</td><td>218 W</td><td>231 W</td><td>—</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.08)">
+      <td>9</td><td><span class="badge badge-cooldown">COOL</span></td><td>1,00 km</td><td>8:32</td><td>8:32/km</td><td>113</td><td>126</td><td>197 W</td><td>205 W</td><td>—</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.08)">
+      <td>10</td><td><span class="badge badge-cooldown">COOL</span></td><td>0,42 km</td><td>3:25</td><td>8:04/km</td><td>113</td><td>119</td><td>212 W</td><td>215 W</td><td>—</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.08)">
+      <td>11</td><td><span class="badge badge-cooldown">COOL</span></td><td>1,00 km</td><td>7:37</td><td>7:37/km</td><td>119</td><td>130</td><td>227 W</td><td>240 W</td><td>—</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.08)">
+      <td>12</td><td><span class="badge badge-cooldown">COOL</span></td><td>0,36 km</td><td>2:46</td><td>7:40/km</td><td>124</td><td>131</td><td>240 W</td><td>254 W</td><td>—</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="insight">
+    <strong>Tempo-osion progressio:</strong> Lap 4 oli nopein (5:51/km, 300 W) ja syke nousi tasaisesti: 131 → 132 → 135 bpm.
+    Kolmannella tempokilometrillä (Lap 6) syke oli jo <strong>135 bpm, max 142</strong> — tämä on
+    selkeästi kynnyksen yläpuolella. Viimeinen tempo-lap (Lap 7, 320 m) näytti palautumista: HR laski takaisin 131:een.
+    <strong>3 km tempo-osio oli juuri oikean mittainen</strong> — pitempi olisi vienyt sykkeen liian korkealle.
+  </div>
+</div>
+
+<!-- Tempo-osion syvempi analyysi -->
+<div class="card">
+  <h2>Tempo-osion analyysi — kynnystason arviointi</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    20 minuutin tempo-osio oli harjoituksen ydin. Miten se sijoittuu kestävyys- ja kynnystasojen välille?
+  </p>
+
+  <div class="chart-container tall">
+    <canvas id="tempoChart"></canvas>
+  </div>
+  <div class="phase-legend">
+    <span><span class="phase-dot" style="background:var(--red)"></span> Syke (bpm)</span>
+    <span><span class="phase-dot" style="background:var(--orange)"></span> Teho (W)</span>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:16px">
+    <div class="insight green">
+      <strong>&#10004; Kynnys löytyi:</strong> Tempo-osion keskiteho <strong>296 W</strong> (norm. 296 W) on lähellä
+      Karin laktaattikynnyksen ylärajaa. Kenttätestissä (28.3.) kestävän hölkän raja oli ~220 W / HR 122.
+      Nyt teho oli <strong>+76 W</strong> korkeampi → selkeästi kynnystasoa, ei kestävää.<br><br>
+      Kynnystaso: <strong>~290–300 W / HR 130–137</strong>
+    </div>
+    <div class="insight blue">
+      <strong>&#9998; FTP-arvio juoksussa:</strong> Garmin raportoi FTP:ksi 310 W (teho-alertit lauenneet yli 310 W).
+      Tempo-osion keskiteho 296 W (20 min) viittaa siihen, että <strong>todellinen juoksu-FTP on ~296–310 W</strong>.
+      Tämä on hyvin linjassa: 95 % FTP:stä (310 W) = 295 W.<br><br>
+      <strong>Tehoalueet päivitetty:</strong><br>
+      Z1 (palautuminen): &lt; 190 W<br>
+      Z2 (peruskestävyys): 190–250 W<br>
+      Z3 (tempo): 250–295 W<br>
+      Z4 (kynnys): 295–340 W<br>
+      Z5 (VO2max): &gt; 340 W
+    </div>
+  </div>
+</div>
+
+<!-- Sykejakauma -->
+<div class="card">
+  <h2>Sykejakauma — koko harjoitus</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Harjoituksen aikana HR-aika jakautui selkeästi: suurin osa ajasta Z3 (kynnys-tempo), loput Z2 (kestävyys).
+  </p>
+  <div class="grid grid-2">
+    <div class="chart-container tall">
+      <canvas id="hrZoneChart"></canvas>
+    </div>
+    <div class="chart-container tall">
+      <canvas id="powerZoneChart"></canvas>
+    </div>
+  </div>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Sykealue</th><th>Alue</th><th>Aika</th><th>Osuus</th><th>Rooli tässä harjoituksessa</th></tr>
+    <tr><td>Z1 (50–60 %)</td><td>&lt; 110 bpm</td><td>0:17</td><td>0,4 %</td><td>Aloitus/pysähdykset</td></tr>
+    <tr><td style="color:var(--green)">Z2 (60–70 %)</td><td>110–128 bpm</td><td>19:57</td><td>30,8 %</td><td>Jäähdyttely + osa lämmittelystä</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td style="color:var(--orange)"><strong>Z3 (70–80 %)</strong></td><td>128–146 bpm</td><td>44:02</td><td style="color:var(--orange)"><strong>67,8 %</strong></td><td>Lämmittely (loppuosa) + koko tempo-osio</td></tr>
+    <tr><td style="color:var(--red)">Z4 (80–90 %)</td><td>146–165 bpm</td><td>0:36</td><td>0,9 %</td><td>Hetkellinen piikki tempo-osiossa</td></tr>
+    <tr><td>Z5 (90–100 %)</td><td>&gt; 165 bpm</td><td>0:00</td><td>0,0 %</td><td>—</td></tr>
+  </table>
+  </div>
+
+  <div class="insight">
+    <strong>Z3-dominoitu harjoitus (68 %):</strong> Tämä on klassinen tempoharjoituksen profiili. Syke pysyi lähes koko
+    harjoituksen ajan Z3-alueella (128–146 bpm), mikä on juuri oikea alue kynnysärsykkeen tuottamiseen.
+    Z4:ää tuli vain 36 sekuntia — Kari ei ylittänyt kynnystä merkittävästi. Tämä kertoo <strong>hyvästä annostelusta</strong>.
+  </div>
+</div>
+
+<!-- Staminan käyttäytyminen -->
+<div class="card">
+  <h2>Stamina-analyysi</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Stamina laski 100 % → 62 % (38 % kulutus). Vertailu kenttätestiin 28.3. (32 % kulutus, 77 min).
+  </p>
+  <div class="chart-container tall">
+    <canvas id="staminaChart"></canvas>
+  </div>
+
+  <h3>Staminan kulutus vaiheittain</h3>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Vaihe</th><th>Kesto</th><th>Stamina alussa (arvio)</th><th>Stamina lopussa (arvio)</th><th>Kulutus</th><th>Kulutus/min</th></tr>
+    <tr><td>Lämmittely</td><td>15 min</td><td>100 %</td><td>~88 %</td><td>~12 %</td><td>0,80 %/min</td></tr>
+    <tr style="background:rgba(237,125,49,0.08)"><td><strong>Tempo-osio</strong></td><td>20 min</td><td>~88 %</td><td>~70 %</td><td>~18 %</td><td style="color:var(--red)"><strong>0,90 %/min</strong></td></tr>
+    <tr><td>Jäähdyttely</td><td>30 min</td><td>~70 %</td><td>62 %</td><td>~8 %</td><td>0,27 %/min</td></tr>
+    <tr style="font-weight:700"><td>Yhteensä</td><td>65 min</td><td>100 %</td><td>62 %</td><td>38 %</td><td>0,58 %/min</td></tr>
+  </table>
+  </div>
+
+  <div class="insight red">
+    <strong>Lämmittely kulutti paljon staminaa:</strong> Lämmittelyn tahti (6:14/km, 291 W, HR 125) oli yllättävän kovaa —
+    lähes tempo-tasoa! Kenttätestissä 28.3. kestävä hölkkä oli 220 W / HR 122. Nyt lämmittely oli
+    <strong>+71 W kovempaa</strong>. Tämä selittää korkean stamina-kulutuksen: lämmittelykin oli käytännössä tempoa.
+  </div>
+
+  <div class="insight blue">
+    <strong>Vertailu kenttätestiin 28.3.:</strong> Kenttätestissä 77 min kulutti 32 % staminaa (0,42 %/min).
+    Tänään 65 min kulutti 38 % (0,58 %/min). Ero johtuu intensiteetistä: tänään keskiteho 258 W vs.
+    kenttätestin 203 W. <strong>Tempotaso kuluttaa staminaa 38 % nopeammin kuin kestävä hölkkä.</strong>
+    Tämä vahvistaa KK55-strategiaa: tempovauhtia ei saa juosta missään kohtaa kilpailua.
+  </div>
+</div>
+
+<!-- Juoksuosuuksien vs. kävelyosuuksien analyysi -->
+<div class="card">
+  <h2>Juoksu vs. kävely — autodetect-data</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Garmin tunnisti automaattisesti 23 juoksupätkää ja 24 kävelypätkää (+ 2 pysähdystä). Tämä kertoo jäähdyttelyn rakenteesta.
+  </p>
+
+  <div class="grid grid-2">
+    <div class="metric" style="border-left: 3px solid var(--orange)">
+      <div class="label">Juoksu (RWD_RUN)</div>
+      <div class="value" style="color:var(--orange)">8,52 <span style="font-size:0.9rem">km</span></div>
+      <div class="detail">56:02 · 275 W · HR 125 · 6:34/km · 23 pätkää</div>
+    </div>
+    <div class="metric" style="border-left: 3px solid var(--blue)">
+      <div class="label">Kävely (RWD_WALK)</div>
+      <div class="value" style="color:var(--blue)">0,98 <span style="font-size:0.9rem">km</span></div>
+      <div class="detail">9:13 · 154 W · HR 114 · 9:24/km · 24 pätkää</div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <strong>Kävelyn rooli:</strong> Kävelyä oli yhteensä vain ~1 km (9 min), mutta se jakautui 24 lyhyeen pätkään.
+    Nämä olivat pääasiassa jäähdyttelyvaiheen lyhyitä kävelytaukoja. Huomaa: kävelypätkien HR (114) ja teho (154 W)
+    vastaavat hyvin KK55-strategian kävelytasoa (~150 W, HR ~115). <strong>Jäähdyttely toimi käytännössä KK55-simulaationa:</strong>
+    vaihteleva hölkkä/kävely luonnollisessa rytmissä.
+  </div>
+</div>
+
+<!-- Juoksumekaniikka -->
+<div class="card">
+  <h2>Juoksumekaniikka — vaihevertailu</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Miten juoksuaskeleet muuttuivat harjoituksen eri vaiheissa?
+  </p>
+  <div class="chart-container tall">
+    <canvas id="mechanicsChart"></canvas>
+  </div>
+
+  <div class="scroll-table">
+  <table>
+    <tr><th>Vaihe</th><th>Askelpituus</th><th>Kadenssi</th><th>Kontaktiaika</th><th>Vert. oskillaatio</th><th>Vert. suhde</th></tr>
+    <tr style="background:rgba(112,173,71,0.08)">
+      <td>Lämmittely</td><td>99,3 cm</td><td>161 spm</td><td>284 ms</td><td>9,0 mm</td><td>9,1 %</td>
+    </tr>
+    <tr style="background:rgba(237,125,49,0.08)">
+      <td>Tempo</td><td>99,2 cm</td><td>167 spm</td><td>275 ms</td><td>8,7 mm</td><td>8,8 %</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.08)">
+      <td>Jäähdyttely</td><td>87,8 cm</td><td>143 spm</td><td>310 ms</td><td>7,5 mm</td><td>8,7 %</td>
+    </tr>
+    <tr style="background:rgba(79,195,247,0.08)">
+      <td>Kävely (RWD)</td><td>88,1 cm</td><td>120 spm</td><td>420 ms</td><td>6,4 mm</td><td>7,3 %</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="insight green">
+    <strong>Hyvä juoksumekaniikka:</strong> Tempossa askelpituus (99 cm) ja kadenssi (167 spm) olivat optimaaliset.
+    Kontaktiaika laski 284 → 275 ms tempossa — merkki tehokkaammasta askelluksesta.
+    Vertikaalinen oskillaatio (8,7 mm / 8,8 %) on erinomainen: Kari ei pompi turhaan.
+    <strong>Jäähdyttelyssä askellus lyheni 11 cm</strong> ja kontaktiaika piteni — normaali väsymysreaktio,
+    joka kertoo oikein ajoitetusta siirtymästä temposta palautumiseen.
+  </div>
+</div>
+
+<!-- Vertailu kenttätestiin -->
+<div class="card">
+  <h2>Vertailu: tempoharjoitus vs. kenttätesti (28.3.)</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Kaksi päivää sitten tehty kenttätesti antaa erinomaisen vertailukohdan. Miten eri intensiteetit eroavat?
+  </p>
+  <div class="chart-container tall">
+    <canvas id="compareChart"></canvas>
+  </div>
+
+  <div class="scroll-table">
+  <table>
+    <tr><th>Mittari</th><th>Kenttätesti 28.3.</th><th>Tempoharjoitus 30.3.</th><th>Muutos</th></tr>
+    <tr><td>Matka</td><td>9,6 km</td><td>9,5 km</td><td>≈ sama</td></tr>
+    <tr><td>Kesto</td><td>77 min</td><td>65 min</td><td style="color:var(--orange)">−12 min (−16 %)</td></tr>
+    <tr><td>Keskim. tahti</td><td>8:01/km</td><td>6:53/km</td><td style="color:var(--orange)">−68 s/km (−14 %)</td></tr>
+    <tr><td>Keskim. HR</td><td>118 bpm</td><td>124 bpm</td><td style="color:var(--orange)">+6 bpm (+5 %)</td></tr>
+    <tr><td>Max HR</td><td>148 bpm</td><td>142 bpm</td><td style="color:var(--green)">−6 bpm</td></tr>
+    <tr><td>Keskim. teho</td><td>203 W</td><td>258 W</td><td style="color:var(--orange)">+55 W (+27 %)</td></tr>
+    <tr><td>Norm. teho</td><td>235 W</td><td>270 W</td><td style="color:var(--orange)">+35 W (+15 %)</td></tr>
+    <tr><td>Stamina lopussa</td><td>68 %</td><td>62 %</td><td style="color:var(--orange)">−6 % enemmän kulutusta</td></tr>
+    <tr><td>Stamina-kulutus/min</td><td>0,42 %/min</td><td>0,58 %/min</td><td style="color:var(--red)">+38 % nopeampi kulutus</td></tr>
+    <tr><td>Kalorit</td><td>630 kcal</td><td>687 kcal</td><td>+57 kcal (+9 %)</td></tr>
+    <tr><td>VO2max</td><td>47.0</td><td>47.0</td><td>— (pysyi)</td></tr>
+  </table>
+  </div>
+
+  <div class="insight blue">
+    <strong>Kaksi eri intensiteettitasoa, selkeä ero:</strong><br>
+    • <strong>Kenttätesti (203 W, HR 118):</strong> KK55-kilpailutason harjoitus. Kestävä, pitkään ylläpidettävä.<br>
+    • <strong>Tempoharjoitus (258 W, HR 124):</strong> Kynnystason harjoitus. Rasittava, max ~40–60 min kestävä.<br><br>
+    +27 % enemmän tehoa tuotti vain +5 % korkeamman keskisykkeen — tämä johtuu tempo-osion lyhyydestä (20 min).
+    Pidemmässä tempossa syke olisi jatkanut nousuaan. <strong>Tärkeä muistutus KK55:een:</strong>
+    tempo-osion 0,90 %/min stamina-kulutus kestäisi vain ~110 min ennen romahdusta (&lt;0 %).
+  </div>
+</div>
+
+<!-- KK55-yhteenveto -->
+<div class="card">
+  <h2>Johtopäätökset — KK55 Karhunkierros 55 km</h2>
+
+  <div class="insight green">
+    <strong>&#10004; Ensimmäinen harjoitusviikon harjoitus onnistui.</strong><br>
+    Viikko 14 (Rakennusviikko 1) alkoi suunnitelman mukaisella tempoharjoituksella.
+    Compliance 94 %, tuntuma hyvä (75/100), RPE sopiva (50/100). Kari on valmis viikon kovimpaan harjoitukseen (la 4.4. pitkä 20–25 km).
+  </div>
+
+  <div class="insight green">
+    <strong>&#10004; Kynnystaso kalibroitu tarkemmin.</strong><br>
+    Tiedonkeruulenkki (26.3.) ja kenttätesti (28.3.) antoivat kestävän alueen, nyt tempoharjoitus antoi kynnyksen:
+    <table style="margin:8px 0;font-size:0.85rem;width:auto">
+      <tr><td style="padding:4px 12px;border:none;text-align:left">Kestävä hölkkä:</td><td style="padding:4px 12px;border:none;color:var(--green)">~220 W / HR 120–125</td></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left">Tempotaso:</td><td style="padding:4px 12px;border:none;color:var(--orange)">~290–300 W / HR 130–137</td></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left">FTP (arvio):</td><td style="padding:4px 12px;border:none;color:var(--red)">~310 W</td></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left">KK55-kilpailutaso:</td><td style="padding:4px 12px;border:none;color:var(--blue)">~175 W (kävely/hölkkä mix)</td></tr>
+    </table>
+  </div>
+
+  <div class="insight red">
+    <strong>&#9888; Varoitus: lämmittely liian kova.</strong><br>
+    Lämmittely (6:14/km, 291 W, HR 125) oli käytännössä tempotasoa. KK55:ssä tämä virhe kostautuu:
+    ensimmäiset 5–10 km tempotahtia → stamina romahtaa jo puolessavälissä. Kenttätestin mukaan
+    <strong>oikea aloitustaso on 220 W / HR 120–125</strong> (hölkkä) tai 150 W (kävely).
+    Seuraavassa harjoituksessa (la 4.4. pitkä lenkki) lämmittely pitää aloittaa kävelyllä.
+  </div>
+
+  <div class="insight blue">
+    <strong>&#9998; Neljän testin synteesi (22.3.–30.3.):</strong><br>
+    Viikon aikana tehty neljä eri harjoitusta eri intensiteeteilla muodostaa selkeän kuvan:
+    <table style="margin:8px 0;font-size:0.85rem;width:auto">
+      <tr><th style="text-align:left;padding:4px 12px;border:none">Harjoitus</th><th style="padding:4px 12px;border:none">Teho</th><th style="padding:4px 12px;border:none">HR</th><th style="padding:4px 12px;border:none">Stamina/min</th></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left">Kävely (kenttätesti)</td><td style="padding:4px 12px;border:none">~150 W</td><td style="padding:4px 12px;border:none">~110</td><td style="padding:4px 12px;border:none;color:var(--green)">0,25 %/min</td></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left">Kestävä hölkkä (kenttätesti)</td><td style="padding:4px 12px;border:none">~220 W</td><td style="padding:4px 12px;border:none">~122</td><td style="padding:4px 12px;border:none;color:var(--green)">0,47 %/min</td></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left">Tempo (tänään)</td><td style="padding:4px 12px;border:none">~296 W</td><td style="padding:4px 12px;border:none">~132</td><td style="padding:4px 12px;border:none;color:var(--red)">0,90 %/min</td></tr>
+    </table>
+    KK55:n 10 h kestossa: kävely (150 min staminaa) on rajaton, hölkkä (212 min) kestää ~3,5 h, tempo (111 min) vain ~1,8 h.
+    <strong>Vuorottelustrategia on ainoa toimiva vaihtoehto.</strong>
+  </div>
+</div>
+
+<!-- Energiatalous -->
+<div class="card">
+  <h2>Energiatalous</h2>
+  <div class="grid grid-3">
+    <div class="metric">
+      <div class="label">Kalorit (netto)</div>
+      <div class="value">687 <span style="font-size:0.9rem">kcal</span></div>
+      <div class="detail">+ 90 kcal BMR = 777 kcal total</div>
+    </div>
+    <div class="metric">
+      <div class="label">Tehon hyötysuhde</div>
+      <div class="value">72 <span style="font-size:0.9rem">kcal/km</span></div>
+      <div class="detail">687 kcal / 9,5 km</div>
+    </div>
+    <div class="metric">
+      <div class="label">Nestehävikki (arvio)</div>
+      <div class="value">919 <span style="font-size:0.9rem">ml</span></div>
+      <div class="detail">Garmin-arvio, 1,1°C</div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <strong>KK55-energiabudjetin tarkistus:</strong> Tänään 72 kcal/km tempotahtia. Kenttätestissä (28.3.) kestävä tahti oli
+    ~66 kcal/km (630 kcal / 9,6 km). KK55:n kilpailutahtia (~175 W) kulutus on arviolta ~60–65 kcal/km,
+    eli 55 km = ~3 300–3 600 kcal. Glykogeeni (~2 000 kcal) + rasvanpoltto (~1 200–1 500 kcal) +
+    tankattava energia ~500–800 kcal → <strong>tankkauksen harjoittelu la 4.4. pitkällä lenkillä on tärkeää.</strong>
+  </div>
+</div>
+
+<script>
+const WARMUP = '#70AD47', ACTIVE = '#ED7D31', COOLDOWN = '#4472C4';
+const WARMUP_BG = 'rgba(112,173,71,0.6)', ACTIVE_BG = 'rgba(237,125,49,0.6)', COOLDOWN_BG = 'rgba(68,114,196,0.6)';
+const RED = '#FF6B6B', GREEN = '#70AD47', YELLOW = '#FFC000';
+
+Chart.defaults.color = '#9ca3af';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+
+// 1. Phase comparison bar chart
+new Chart(document.getElementById('phaseChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Lämmittely', 'Tempo', 'Jäähdyttely'],
+    datasets: [
+      {
+        label: 'Keskim. teho (W)',
+        data: [291, 296, 216],
+        backgroundColor: [WARMUP_BG, ACTIVE_BG, COOLDOWN_BG],
+        borderColor: [WARMUP, ACTIVE, COOLDOWN],
+        borderWidth: 1, yAxisID: 'y'
+      },
+      {
+        label: 'Keskim. HR (bpm)',
+        data: [125, 132, 117],
+        type: 'line', borderColor: RED, tension: 0.3, pointRadius: 8,
+        pointBackgroundColor: [WARMUP, ACTIVE, COOLDOWN],
+        yAxisID: 'y2', borderWidth: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { position: 'left', min: 100, max: 350, title: { display: true, text: 'Teho (W)' },
+        grid: { color: 'rgba(255,255,255,0.05)' } },
+      y2: { position: 'right', min: 100, max: 150, title: { display: true, text: 'Syke (bpm)' },
+        grid: { display: false } },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          kk55line: {
+            type: 'line', yMin: 220, yMax: 220, yScaleID: 'y',
+            borderColor: 'rgba(112,173,71,0.5)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'KK55 hölkkätaso (220 W)', position: 'end', color: GREEN, font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 2. Tempo laps detail
+new Chart(document.getElementById('tempoChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Lap 4 (1 km)', 'Lap 5 (1 km)', 'Lap 6 (1 km)', 'Lap 7 (0,32 km)'],
+    datasets: [
+      {
+        label: 'Teho (W)',
+        data: [300, 290, 298, 297],
+        backgroundColor: ACTIVE_BG, borderColor: ACTIVE, borderWidth: 1, yAxisID: 'y'
+      },
+      {
+        label: 'Syke (bpm)',
+        data: [131, 132, 135, 131],
+        type: 'line', borderColor: RED, backgroundColor: 'rgba(255,107,107,0.1)',
+        fill: true, tension: 0.3, pointRadius: 6, yAxisID: 'y2', borderWidth: 2
+      },
+      {
+        label: 'Tahti (s/km)',
+        data: [351, 366, 362, 381],
+        type: 'line', borderColor: GREEN, tension: 0.3, pointRadius: 6,
+        yAxisID: 'y3', borderWidth: 2, borderDash: [5,3]
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { position: 'left', min: 250, max: 330,
+        title: { display: true, text: 'Teho (W)' },
+        grid: { color: 'rgba(255,255,255,0.05)' } },
+      y2: { position: 'right', min: 125, max: 145,
+        title: { display: true, text: 'Syke (bpm)' },
+        grid: { display: false } },
+      y3: { display: false, min: 330, max: 400 },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          hr130: {
+            type: 'line', yMin: 130, yMax: 130, yScaleID: 'y2',
+            borderColor: 'rgba(255,107,107,0.5)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'HR 130 kestävyyskatto', position: 'start', color: RED, font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 3. HR Zone donut
+new Chart(document.getElementById('hrZoneChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Z1 (<110)', 'Z2 (110–128)', 'Z3 (128–146)', 'Z4 (146–165)', 'Z5 (>165)'],
+    datasets: [{
+      data: [17, 1197, 2642, 36, 0],
+      backgroundColor: ['#9ca3af', '#70AD47', '#ED7D31', '#FF6B6B', '#9B59B6'],
+      borderColor: '#1a1d27', borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#e4e4e7', padding: 12, font: { size: 11 } } },
+      title: { display: true, text: 'Sykejakauma (sekuntia)', color: '#e4e4e7', font: { size: 13 } }
+    }
+  }
+});
+
+// 4. Power Zone donut
+new Chart(document.getElementById('powerZoneChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Z1 Palautuminen', 'Z2 Kestävyys', 'Z3 Tempo', 'Z4 Kynnys', 'Z5 VO2max'],
+    datasets: [{
+      data: [784, 1877, 384, 45, 6],
+      backgroundColor: ['#9ca3af', '#70AD47', '#ED7D31', '#FF6B6B', '#9B59B6'],
+      borderColor: '#1a1d27', borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#e4e4e7', padding: 12, font: { size: 11 } } },
+      title: { display: true, text: 'Tehojakauma (sekuntia)', color: '#e4e4e7', font: { size: 13 } }
+    }
+  }
+});
+
+// 5. Stamina projection
+new Chart(document.getElementById('staminaChart'), {
+  type: 'line',
+  data: {
+    labels: ['0 min', '5', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55', '60', '65'],
+    datasets: [
+      {
+        label: 'Stamina (arvio)',
+        data: [100, 96, 92, 88, 83, 79, 74, 70, 68, 66, 65, 64, 63, 62],
+        borderColor: YELLOW, backgroundColor: 'rgba(255,192,0,0.1)', fill: true,
+        tension: 0.3, pointRadius: 4, borderWidth: 2
+      },
+      {
+        label: 'KK55 raja (50 %)',
+        data: [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50],
+        borderColor: 'rgba(255,107,107,0.4)', borderWidth: 2, borderDash: [6,3],
+        pointRadius: 0, fill: false
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { min: 0, max: 105, title: { display: true, text: 'Stamina (%)' },
+        grid: { color: 'rgba(255,255,255,0.05)' } },
+      x: { title: { display: true, text: 'Aika' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          warmup: {
+            type: 'box', xMin: 0, xMax: 3, yMin: 0, yMax: 105,
+            backgroundColor: 'rgba(112,173,71,0.08)', borderWidth: 0,
+            label: { display: true, content: 'Lämmittely', position: { x: 'center', y: 'start' },
+              color: GREEN, font: {size: 10} }
+          },
+          tempo: {
+            type: 'box', xMin: 3, xMax: 7, yMin: 0, yMax: 105,
+            backgroundColor: 'rgba(237,125,49,0.08)', borderWidth: 0,
+            label: { display: true, content: 'Tempo', position: { x: 'center', y: 'start' },
+              color: ACTIVE, font: {size: 10} }
+          },
+          cooldown: {
+            type: 'box', xMin: 7, xMax: 13, yMin: 0, yMax: 105,
+            backgroundColor: 'rgba(68,114,196,0.08)', borderWidth: 0,
+            label: { display: true, content: 'Jäähdyttely', position: { x: 'center', y: 'start' },
+              color: COOLDOWN, font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 6. Compare chart: field test vs tempo
+new Chart(document.getElementById('compareChart'), {
+  type: 'radar',
+  data: {
+    labels: ['Teho (W)', 'Syke (bpm)', 'Tahti (min/km)', 'Stamina-kulutus (%/min)', 'Kalorit/km', 'Norm. teho (W)'],
+    datasets: [
+      {
+        label: 'Kenttätesti 28.3. (kestävä)',
+        data: [203/300*100, 118/150*100, (1-((8*60+1)-350)/(8*60+1))*100, 0.42/1.0*100, 66/80*100, 235/300*100],
+        borderColor: GREEN, backgroundColor: 'rgba(112,173,71,0.15)', borderWidth: 2, pointRadius: 4
+      },
+      {
+        label: 'Tempoharjoitus 30.3. (kynnys)',
+        data: [258/300*100, 124/150*100, (1-((6*60+53)-350)/(6*60+53))*100, 0.58/1.0*100, 72/80*100, 270/300*100],
+        borderColor: ACTIVE, backgroundColor: 'rgba(237,125,49,0.15)', borderWidth: 2, pointRadius: 4
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      r: {
+        min: 0, max: 100,
+        angleLines: { color: 'rgba(255,255,255,0.1)' },
+        grid: { color: 'rgba(255,255,255,0.1)' },
+        pointLabels: { color: '#e4e4e7', font: { size: 11 } },
+        ticks: { display: false }
+      }
+    },
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#e4e4e7', padding: 16 } }
+    }
+  }
+});
+
+// 7. Mechanics comparison
+new Chart(document.getElementById('mechanicsChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Lämmittely', 'Tempo', 'Jäähdyttely', 'Kävely (RWD)'],
+    datasets: [
+      {
+        label: 'Askelpituus (cm)',
+        data: [99.3, 99.2, 87.8, 88.1],
+        backgroundColor: ['rgba(112,173,71,0.5)', 'rgba(237,125,49,0.5)', 'rgba(68,114,196,0.5)', 'rgba(79,195,247,0.5)'],
+        borderColor: [WARMUP, ACTIVE, COOLDOWN, '#4FC3F7'],
+        borderWidth: 1, yAxisID: 'y'
+      },
+      {
+        label: 'Kadenssi (spm)',
+        data: [161, 167, 143, 120],
+        type: 'line', borderColor: RED, tension: 0.3, pointRadius: 6,
+        yAxisID: 'y2', borderWidth: 2
+      },
+      {
+        label: 'Kontaktiaika (ms)',
+        data: [284, 275, 310, 420],
+        type: 'line', borderColor: YELLOW, tension: 0.3, pointRadius: 6,
+        borderDash: [5,3], yAxisID: 'y3', borderWidth: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { position: 'left', min: 70, max: 110,
+        title: { display: true, text: 'Askelpituus (cm)' },
+        grid: { color: 'rgba(255,255,255,0.05)' } },
+      y2: { position: 'right', min: 100, max: 180,
+        title: { display: true, text: 'Kadenssi (spm)' },
+        grid: { display: false } },
+      y3: { display: false, min: 250, max: 450 },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+</script>
+</body>
+</html>
