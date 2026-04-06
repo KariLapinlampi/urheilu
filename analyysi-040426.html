@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitkä lenkki Kuusamo 04.04.2026 — KK55-valmistautuminen</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a;
+    --text: #e4e4e7; --dim: #9ca3af;
+    --blue: #4472C4; --orange: #ED7D31; --green: #70AD47;
+    --red: #FF6B6B; --yellow: #FFC000; --purple: #9B59B6;
+    --walk-color: #4472C4; --jog-color: #70AD47; --tempo-color: #ED7D31; --dead-color: #9ca3af;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; padding: 20px;
+    max-width: 1400px; margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.8rem; margin-bottom: 4px;
+    background: linear-gradient(135deg, var(--green), var(--blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: var(--dim); font-size: 0.9rem; margin-bottom: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 1.15rem; margin-bottom: 12px; color: var(--text); }
+  .card h3 { font-size: 1rem; margin: 16px 0 8px; color: var(--dim); }
+  .grid { display: grid; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .metric {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px; text-align: center;
+  }
+  .metric .label { font-size: 0.8rem; color: var(--dim); margin-bottom: 4px; }
+  .metric .value { font-size: 1.6rem; font-weight: 700; }
+  .metric .detail { font-size: 0.75rem; color: var(--dim); margin-top: 2px; }
+  .chart-container { position: relative; height: 300px; margin: 10px 0; }
+  .chart-container.tall { height: 380px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--border); }
+  th { color: var(--dim); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+  td:first-child, th:first-child { text-align: left; }
+  tr:hover td { background: rgba(255,255,255,0.03); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.75rem; font-weight: 600;
+  }
+  .badge-walk { background: var(--walk-color); color: #fff; }
+  .badge-jog { background: var(--jog-color); color: #000; }
+  .badge-tempo { background: var(--tempo-color); color: #fff; }
+  .badge-climb { background: var(--yellow); color: #000; }
+  .insight {
+    border-left: 3px solid var(--orange); padding: 12px 16px;
+    margin: 12px 0; background: rgba(237,125,49,0.08); border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+  }
+  .insight.green { border-left-color: var(--green); background: rgba(112,173,71,0.08); }
+  .insight.red { border-left-color: var(--red); background: rgba(255,107,107,0.08); }
+  .insight.blue { border-left-color: var(--blue); background: rgba(68,114,196,0.08); }
+  .insight strong { color: var(--text); }
+  .phase-legend {
+    display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 4px;
+    font-size: 0.8rem; color: var(--dim);
+  }
+  .phase-legend span {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .phase-dot {
+    width: 10px; height: 10px; border-radius: 3px; display: inline-block;
+  }
+  .scroll-table { overflow-x: auto; }
+  .quote {
+    border-left: 3px solid var(--purple); padding: 12px 16px;
+    margin: 12px 0; background: rgba(155,89,182,0.08); border-radius: 0 8px 8px 0;
+    font-style: italic; font-size: 0.9rem;
+  }
+  .quote .attr { font-style: normal; color: var(--dim); font-size: 0.8rem; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Pitkä lenkki Kuusamo — KK55-harjoitus</h1>
+<p class="subtitle">Lauantai 4.4.2026 — Kuusamo, Pyhän Jyssäys + Rukan kylä — 26,5 km / 3h 59min — Viikko 15: Ruka-mökki</p>
+
+<!-- Yleiset metriikat -->
+<div class="grid grid-4">
+  <div class="metric">
+    <div class="label">Matka</div>
+    <div class="value">26,5 <span style="font-size:0.9rem">km</span></div>
+    <div class="detail">Polku + tie, Kuusamo</div>
+  </div>
+  <div class="metric">
+    <div class="label">Kesto</div>
+    <div class="value">3:59 <span style="font-size:0.9rem">h</span></div>
+    <div class="detail">239 min kokonaisaika</div>
+  </div>
+  <div class="metric">
+    <div class="label">Nousu / lasku</div>
+    <div class="value" style="color:var(--yellow)">↑522 <span style="font-size:0.9rem">m</span></div>
+    <div class="detail">↓520 m &mdash; vaativa profiili</div>
+  </div>
+  <div class="metric">
+    <div class="label">Keskim. syke</div>
+    <div class="value" style="color:var(--blue)">122 <span style="font-size:0.9rem">bpm</span></div>
+    <div class="detail">Max 144 bpm &mdash; alle katon!</div>
+  </div>
+  <div class="metric">
+    <div class="label">Keskim. teho</div>
+    <div class="value" style="color:var(--orange)">199 <span style="font-size:0.9rem">W</span></div>
+    <div class="detail">Norm. teho 222 W</div>
+  </div>
+  <div class="metric">
+    <div class="label">Keskim. tahti</div>
+    <div class="value" style="color:var(--green)">9:01 <span style="font-size:0.9rem">/km</span></div>
+    <div class="detail">Kävely/hölkkä-vuorottelu</div>
+  </div>
+  <div class="metric">
+    <div class="label">Kalorit</div>
+    <div class="value">1 961 <span style="font-size:0.9rem">kcal</span></div>
+    <div class="detail">74 kcal/km</div>
+  </div>
+  <div class="metric">
+    <div class="label">Stamina lopussa</div>
+    <div class="value" style="color:var(--red)">8 <span style="font-size:0.9rem">%</span></div>
+    <div class="detail">100% &rarr; 8% (kulutus 92%)</div>
+  </div>
+</div>
+
+<!-- Karin tuntemus -->
+<div class="card">
+  <h2>Karin tuntemus lenkin jälkeen</h2>
+  <div class="quote">
+    Matalan sykkeen taktiikka selvästikin toimi. En tuntenut missään vaiheessa itseäni rasittuneeksi, toki matka alkoi jossain vaiheessa tuntua jaloissa, mutta kimmoisuuskaan ei kadonnut aivan kokonaan. Mökille päästyä en ollut puolikuollut, vaan käväisin rauhallisesti saunassa, minkä jälkeen lähdettiin taas porukalla kohti seuraavaa ulkoilua.
+    <div class="attr">&mdash; Karin Garmin-muistiinpanot</div>
+  </div>
+  <div class="quote">
+    Stamina, jota olen nyt kellosta seuraillut, alkoi kyllä lähestyä nollaa, mutta lukema ei vastannut tuntemusta.
+    <div class="attr">&mdash; Tärkeä havainto: subjektiivinen tuntemus &gt; Garmin-lukema</div>
+  </div>
+  <div class="insight green">
+    <strong>&#10004; Iltapäivällä vielä 5 km:n kävely Riistitunturille</strong> (Posio, Satu + Kaisa + Julius). Pitkä lenkki ei tuntunut jaloissa lainkaan. Tämä on merkittävä osoitus siitä, että strategia säästää kehoa &mdash; aiemmilla kisoilla Kari on ollut "puolikuollut" lyhyemmilläkin matkoilla.
+  </div>
+</div>
+
+<!-- Sykekuri -->
+<div class="card">
+  <h2>Sykekuri — 130 bpm katto</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Lenkin tärkein tavoite oli pitää syke alle 130 bpm &mdash; KK55-kisastrategian mukainen kestävyyskatto.
+    Tämä onnistui erinomaisesti.
+  </p>
+
+  <div class="grid grid-2">
+    <div class="chart-container tall">
+      <canvas id="hrZoneChart"></canvas>
+    </div>
+    <div>
+      <div class="scroll-table">
+      <table>
+        <tr><th>Sykealue</th><th>Alue</th><th>Osuus</th><th>Rooli tässä harjoituksessa</th></tr>
+        <tr><td>Z1 (palautuminen)</td><td>&lt; 110 bpm</td><td>7,9 %</td><td>Tauot, lähdöt, pysähdykset</td></tr>
+        <tr style="background:rgba(112,173,71,0.12)"><td style="color:var(--green)"><strong>Z2 (kestävyys)</strong></td><td>110–128 bpm</td><td style="color:var(--green)"><strong>62,4 %</strong></td><td>Pääasiallinen kulkutapa &#10004;</td></tr>
+        <tr><td style="color:var(--orange)">Z3 (tempo)</td><td>128–146 bpm</td><td>29,7 %</td><td>Nousut, hetkelliset reipastumiset</td></tr>
+        <tr><td style="color:var(--red)">Z4 (kynnys)</td><td>146–165 bpm</td><td>0,0 %</td><td>&mdash;</td></tr>
+        <tr><td>Z5 (VO2max)</td><td>&gt; 165 bpm</td><td>0,0 %</td><td>&mdash;</td></tr>
+      </table>
+      </div>
+
+      <div class="insight green" style="margin-top:16px">
+        <strong>&#10004; Sykekuri piti.</strong> 80,3 % ajasta syke oli alle 130 bpm. Keskisyke 122 osui täsmälleen
+        kenttätestissä (28.3.) kalibroituun kestävän hölkän alueelle (120&ndash;125). Max HR 144 pysyi
+        reilusti alle 183:n. Z4/Z5-aikaa ei kertynyt lainkaan.<br><br>
+        <strong>Vertaa aiempiin kisoihin:</strong> KK34 2023: Z3+Z4 = 81 %. Nyt: 29,7 %. Tämä on paradigman muutos.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tehojakauma -->
+<div class="card">
+  <h2>Tehojakauma — kävely/hölkkä-vuorottelu</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Miten teho jakautui KK55-strategian eri alueille? Tavoitteena: kävely (&lt;160 W) nousuissa,
+    hölkkä (210&ndash;260 W) tasaisilla, ei tempoa.
+  </p>
+
+  <div class="grid grid-2">
+    <div class="chart-container tall">
+      <canvas id="powerZoneChart"></canvas>
+    </div>
+    <div>
+      <div class="scroll-table">
+      <table>
+        <tr><th>Alue</th><th>Osuus</th><th>Ka. teho</th><th>Arvio</th></tr>
+        <tr><td>Pysähdykset (0 W)</td><td>7,0 %</td><td>&mdash;</td><td>Tauot, GPS-seisaukset</td></tr>
+        <tr style="background:rgba(68,114,196,0.08)"><td style="color:var(--blue)"><strong>Kävely (&lt;160 W)</strong></td><td>16,7 %</td><td>126 W</td><td style="color:var(--green)">&#10004; Nousut oikein</td></tr>
+        <tr style="background:rgba(156,163,175,0.08)"><td style="color:var(--dim)">"Kuollut alue" (160&ndash;210 W)</td><td>20,1 %</td><td>189 W</td><td>Siirtymävaiheet</td></tr>
+        <tr style="background:rgba(112,173,71,0.12)"><td style="color:var(--green)"><strong>Hölkkä (210&ndash;260 W)</strong></td><td style="color:var(--green)"><strong>41,5 %</strong></td><td>236 W</td><td style="color:var(--green)">&#10004; Suurin osuus</td></tr>
+        <tr style="background:rgba(237,125,49,0.08)"><td style="color:var(--orange)">Tempo (&gt;260 W)</td><td>14,6 %</td><td>285 W</td><td style="color:var(--orange)">&#9888; Maastopiikit</td></tr>
+      </table>
+      </div>
+
+      <div class="insight" style="margin-top:16px">
+        <strong>Hölkkä hallitsi (41,5 %)</strong> &mdash; juuri oikein. Kävelyn osuus (16,7 %) vastaa nousuja (522 m nousua).
+        Kuolleen alueen 20 % on väistämätöntä maastossa: siirtymät kävelyn ja hölkän välillä menevät sen läpi.
+        Tempo-osuus (14,6 %) on maastotehopiikkejä &mdash; <strong>KK55:ssä tavoite alle 10 %</strong>.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stamina-analyysi -->
+<div class="card">
+  <h2>Stamina-analyysi</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Stamina laski 100 % &rarr; 8 % (92 % kulutus, 239 min). Kulutusvauhti 0,39 %/min eli 3,5 %/km.
+    Vertailu aiempiin: kenttätesti 28.3. kulutti 0,42 %/min, tempoharjoitus 30.3. kulutti 0,58 %/min.
+  </p>
+
+  <div class="chart-container tall">
+    <canvas id="staminaChart"></canvas>
+  </div>
+
+  <h3>Staminan kulutus 5 km:n jaksoissa</h3>
+  <div class="scroll-table">
+  <table>
+    <tr><th>Jakso</th><th>Stamina alussa</th><th>Stamina lopussa</th><th>Kulutus</th><th>Kulutus/km</th><th>Huomio</th></tr>
+    <tr><td>0&ndash;5 km</td><td>100 %</td><td>~80 %</td><td>~20 %</td><td>4,0 %/km</td><td>Normaali alkukulutus</td></tr>
+    <tr><td>5&ndash;10 km</td><td>~80 %</td><td>~62 %</td><td>~18 %</td><td>3,6 %/km</td><td>Pyhän Jyssäys -nousut</td></tr>
+    <tr><td>10&ndash;15 km</td><td>~62 %</td><td>~46 %</td><td>~16 %</td><td>3,2 %/km</td><td>Polkuosuus + tauot</td></tr>
+    <tr style="background:rgba(112,173,71,0.08)"><td>15&ndash;20 km</td><td>~46 %</td><td>~30 %</td><td>~16 %</td><td>3,2 %/km</td><td>Tasainen tieosuus &#10004;</td></tr>
+    <tr><td>20&ndash;26,5 km</td><td>~30 %</td><td>8 %</td><td>~22 %</td><td>3,4 %/km</td><td>Rukan kylä + paluu</td></tr>
+    <tr style="font-weight:700"><td>Yhteensä</td><td>100 %</td><td>8 %</td><td>92 %</td><td>3,5 %/km</td><td>&mdash;</td></tr>
+  </table>
+  </div>
+
+  <div class="insight green">
+    <strong>&#10004; Puolivälin stamina 54 %</strong> &mdash; yli 50 %:n tavoitteen. Kulutusvauhti oli tasainen ja ennustettava
+    koko lenkin ajan, ei romahduksia. Tämä on KK55-strategian ydinperiaatteen toteutumista:
+    pysytään kestävällä alueella, niin stamina laskee lineaarisesti.
+  </div>
+
+  <div class="insight red">
+    <strong>&#9888; KK55-skaalaus:</strong> 3,5 %/km kulutuksella stamina loppuisi noin km 28:n kohdalla.
+    KK55:ssä (55 km) tavoitekulutus on ~1,8 %/km &rarr; vaatii <strong>keskitehon laskua 199 W &rarr; ~175 W</strong>.
+    Tämä tarkoittaa enemmän kävelyä ja rauhallisempaa hölkkää. Tämä on saavutettavissa &mdash; tällä
+    lenkillä Kari juoksi tarkoituksella "kisasykkeillä" mutta lyhyemmällä matkalla.
+  </div>
+
+  <div class="insight blue">
+    <strong>&#9998; Mielenkiintoinen havainto:</strong> Karin mukaan stamina läheni nollaa, mutta tuntemus ei vastannut lukemaa.
+    Garminin stamina-algoritmi on todennäköisesti kalibroitu aiempaan aggressiivisempaan juoksutyyliin.
+    Kun strategia muuttui konservatiivisemmaksi, <strong>todellinen kestävyys on parempi kuin algoritmi ennustaa</strong>.
+    Tämä on hyvä uutinen KK55:n kannalta.
+  </div>
+</div>
+
+<!-- Km-lapit -->
+<div class="card">
+  <h2>Kilometrilapit</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    29 lapin erittely. Lapit 1&ndash;9 = tie alkumatka, 10&ndash;15 = Pyhän Jyssäys (polku), 16&ndash;29 = Rukan kylä + paluu (tie).
+  </p>
+
+  <div class="chart-container tall">
+    <canvas id="lapChart"></canvas>
+  </div>
+  <div class="phase-legend">
+    <span><span class="phase-dot" style="background:var(--jog-color)"></span> Tieosuus</span>
+    <span><span class="phase-dot" style="background:var(--yellow)"></span> Pyhän Jyssäys (polku)</span>
+    <span><span class="phase-dot" style="background:var(--blue)"></span> Rukan kylä + paluu</span>
+    <span><span class="phase-dot" style="background:rgba(255,107,107,0.5)"></span> HR 130 -katto</span>
+  </div>
+
+  <div class="scroll-table">
+  <table>
+    <tr><th>Km</th><th>Tyyppi</th><th>Tahti</th><th>Keskim. HR</th><th>Max HR</th><th>Teho</th><th>Nousu</th><th>Kadenssi</th></tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>1</td><td><span class="badge badge-jog">TIE</span></td><td>8:28/km</td><td>115</td><td>127</td><td>201 W</td><td>+10 m</td><td>130</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>2</td><td><span class="badge badge-jog">TIE</span></td><td>8:36/km</td><td>126</td><td>133</td><td>224 W</td><td>+26 m</td><td>143</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>3</td><td><span class="badge badge-jog">TIE</span></td><td>7:43/km</td><td>123</td><td>132</td><td>225 W</td><td>+6 m</td><td>159</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>4</td><td><span class="badge badge-jog">TIE</span></td><td>7:36/km</td><td>123</td><td>137</td><td>232 W</td><td>+7 m</td><td>153</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>5</td><td><span class="badge badge-jog">TIE</span></td><td>9:35/km</td><td>127</td><td>140</td><td>219 W</td><td>+48 m</td><td>131</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>6</td><td><span class="badge badge-jog">TIE</span></td><td>8:30/km</td><td>123</td><td>135</td><td>215 W</td><td>+14 m</td><td>144</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>7</td><td><span class="badge badge-jog">TIE</span></td><td>7:40/km</td><td>119</td><td>137</td><td>218 W</td><td>+14 m</td><td>147</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>8</td><td><span class="badge badge-jog">TIE</span></td><td>8:45/km</td><td>122</td><td>137</td><td>208 W</td><td>+18 m</td><td>133</td>
+    </tr>
+    <tr style="background:rgba(112,173,71,0.05)">
+      <td>9</td><td><span class="badge badge-jog">TIE</span></td><td>11:18/km</td><td>124</td><td>142</td><td>172 W</td><td>+44 m</td><td>116</td>
+    </tr>
+    <tr style="background:rgba(255,192,0,0.08)">
+      <td>10</td><td><span class="badge badge-climb">POLKU</span></td><td>11:43/km</td><td>121</td><td>142</td><td>167 W</td><td>+42 m</td><td>111</td>
+    </tr>
+    <tr style="background:rgba(255,192,0,0.08)">
+      <td>11</td><td><span class="badge badge-climb">POLKU</span></td><td>11:02/km</td><td>126</td><td>144</td><td>186 W</td><td>+59 m</td><td>113</td>
+    </tr>
+    <tr style="background:rgba(255,192,0,0.08)">
+      <td>12</td><td><span class="badge badge-climb">POLKU</span></td><td>15:15/km</td><td>107</td><td>121</td><td>89 W</td><td>+2 m</td><td>97</td>
+    </tr>
+    <tr style="background:rgba(255,192,0,0.08)">
+      <td>13</td><td><span class="badge badge-climb">POLKU</span></td><td>10:48/km</td><td>122</td><td>138</td><td>147 W</td><td>+17 m</td><td>113</td>
+    </tr>
+    <tr style="background:rgba(255,192,0,0.08)">
+      <td>14</td><td><span class="badge badge-climb">POLKU</span></td><td>9:58/km</td><td>124</td><td>134</td><td>185 W</td><td>+30 m</td><td>134</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>15</td><td><span class="badge badge-walk">PALUU</span></td><td>8:05/km</td><td>120</td><td>132</td><td>200 W</td><td>+2 m</td><td>142</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>16</td><td><span class="badge badge-walk">PALUU</span></td><td>7:37/km</td><td>126</td><td>134</td><td>237 W</td><td>+14 m</td><td>154</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>17</td><td><span class="badge badge-walk">PALUU</span></td><td>10:08/km</td><td>126</td><td>133</td><td>206 W</td><td>+56 m</td><td>125</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>18</td><td><span class="badge badge-walk">PALUU</span></td><td>7:47/km</td><td>127</td><td>139</td><td>235 W</td><td>+12 m</td><td>152</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>19</td><td><span class="badge badge-walk">PALUU</span></td><td>8:26/km</td><td>127</td><td>136</td><td>219 W</td><td>+22 m</td><td>143</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>20</td><td><span class="badge badge-walk">PALUU</span></td><td>8:31/km</td><td>122</td><td>133</td><td>207 W</td><td>+21 m</td><td>139</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>21</td><td><span class="badge badge-walk">PALUU</span></td><td>7:35/km</td><td>122</td><td>130</td><td>207 W</td><td>0 m</td><td>154</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>22</td><td><span class="badge badge-walk">PALUU</span></td><td>7:32/km</td><td>126</td><td>139</td><td>221 W</td><td>+5 m</td><td>158</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>23</td><td><span class="badge badge-walk">PALUU</span></td><td>8:53/km</td><td>123</td><td>133</td><td>203 W</td><td>+24 m</td><td>138</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>24</td><td><span class="badge badge-walk">PALUU</span></td><td>7:57/km</td><td>122</td><td>136</td><td>217 W</td><td>+12 m</td><td>147</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>25</td><td><span class="badge badge-walk">PALUU</span></td><td>7:44/km</td><td>126</td><td>138</td><td>237 W</td><td>+8 m</td><td>157</td>
+    </tr>
+    <tr style="background:rgba(68,114,196,0.05)">
+      <td>26</td><td><span class="badge badge-walk">PALUU</span></td><td>8:06/km</td><td>125</td><td>137</td><td>225 W</td><td>+9 m</td><td>150</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="insight green">
+    <strong>&#10004; Negatiivinen splitti lopussa.</strong> Viimeiset 10 km (km 16&ndash;26) olivat keskimäärin 7:55/km &mdash;
+    nopeampia kuin alku (km 1&ndash;9: 8:42/km). Tämä todistaa, että energiaa jäi reserviin.
+    Kari ei "sammunut" loppua kohti, vaan pystyi jopa kiihdyttämään.
+  </div>
+
+  <div class="insight">
+    <strong>Pyhän Jyssäys (km 10&ndash;14):</strong> Polkuosuudella tahti hidastui 10&ndash;15 min/km, teho laski 89&ndash;186 W, kadenssi putosi
+    97&ndash;134 spm. Tämä on <strong>juuri oikein</strong>: jyrkät nousut käveltiin, syke pidettiin kurissa (max 144).
+    KK55:ssä vastaavia osuuksia on paljon enemmän &mdash; tämä harjoitti oikeaa liikkumismuotoa.
+  </div>
+</div>
+
+<!-- Aikasarjan 5-osio -->
+<div class="card">
+  <h2>Lenkin profiili viidessä osassa</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Miten suorituskyky kehittyi lenkin edetessä?
+  </p>
+
+  <div class="chart-container tall">
+    <canvas id="profileChart"></canvas>
+  </div>
+
+  <div class="scroll-table">
+  <table>
+    <tr><th>Jakso</th><th>Ka. HR</th><th>Max HR</th><th>Ka. teho</th><th>Norm. teho</th><th>Ka. tahti</th><th>Korkeusvaihtelut</th></tr>
+    <tr><td>0&ndash;20 %</td><td>122 bpm</td><td>139</td><td>227 W</td><td>240 W</td><td>8:13/km</td><td>311&ndash;367 m</td></tr>
+    <tr><td>20&ndash;40 %</td><td>122 bpm</td><td>142</td><td>211 W</td><td>231 W</td><td>9:00/km</td><td>335&ndash;393 m</td></tr>
+    <tr style="background:rgba(255,192,0,0.08)"><td>40&ndash;60 %</td><td>118 bpm</td><td>144</td><td>183 W</td><td>206 W</td><td>9:54/km</td><td>314&ndash;427 m</td></tr>
+    <tr><td>60&ndash;80 %</td><td>125 bpm</td><td>139</td><td>221 W</td><td>234 W</td><td>8:25/km</td><td>293&ndash;375 m</td></tr>
+    <tr style="background:rgba(112,173,71,0.08)"><td>80&ndash;100 %</td><td>124 bpm</td><td>138</td><td>221 W</td><td>235 W</td><td>7:54/km</td><td>314&ndash;375 m</td></tr>
+  </table>
+  </div>
+
+  <div class="insight green">
+    <strong>&#10004; Viimeinen viidennes (80&ndash;100 %) oli nopein: 7:54/km.</strong> Teho (221 W) ja normaalistettu teho (235 W)
+    pysyivät samoina kuin 60&ndash;80 % jaksossa. Keskijakso (40&ndash;60 %) oli hitain &mdash; tämä osuu Pyhän Jyssäyksen nousuvaltaiseen
+    maastoon (korkeus jopa 427 m). Syke pysyi tasaisena koko lenkin: 118&ndash;125 bpm. <strong>Ei sydän- eikä jalkaromahdusta.</strong>
+  </div>
+</div>
+
+<!-- Vertailu aiempiin -->
+<div class="card">
+  <h2>Vertailu: nyt vs. aiemmat kisat</h2>
+  <p style="color:var(--dim);font-size:0.88rem;margin-bottom:12px">
+    Miten tämä harjoitus vertautuu Karin aiempiin pitkiin suorituksiin ja kisastrategioihin?
+  </p>
+
+  <div class="chart-container tall">
+    <canvas id="compareChart"></canvas>
+  </div>
+
+  <div class="scroll-table">
+  <table>
+    <tr><th>Mittari</th><th style="color:var(--green)">Kuusamo 4.4.2026</th><th>KK34 2025</th><th>KK34 2023</th><th style="color:var(--blue)">KK55 tavoite</th></tr>
+    <tr><td>Matka</td><td>26,5 km</td><td>34 km</td><td>34 km</td><td>55 km</td></tr>
+    <tr><td>Nousu</td><td>522 m</td><td>~1 200 m</td><td>~1 170 m</td><td>~1 800 m (arvio)</td></tr>
+    <tr><td>Ka. syke</td><td style="color:var(--green)">122 bpm</td><td>128 bpm</td><td style="color:var(--red)">141 bpm</td><td style="color:var(--green)">&lt; 125 bpm</td></tr>
+    <tr><td>Max HR</td><td style="color:var(--green)">144 bpm</td><td>152 bpm</td><td style="color:var(--red)">175 bpm</td><td>&lt; 140 bpm</td></tr>
+    <tr><td>Ka. teho</td><td>199 W</td><td>~190 W</td><td>~210 W</td><td>~175 W</td></tr>
+    <tr><td>Z3+Z4 osuus</td><td style="color:var(--green)">29,7 %</td><td>~45 %</td><td style="color:var(--red)">81 %</td><td>&lt; 20 %</td></tr>
+    <tr><td>Stamina puolivälissä</td><td style="color:var(--green)">54 %</td><td>26 %</td><td>n/a</td><td>&gt; 50 %</td></tr>
+    <tr><td>Tuntemus lopussa</td><td style="color:var(--green)">"Ei rasittunut"</td><td>"Väsynyt"</td><td>"Tuhoutunut"</td><td>"Vielä pystyn"</td></tr>
+  </table>
+  </div>
+
+  <div class="insight green">
+    <strong>&#10004; Strategian evoluutio on näkyvissä.</strong> KK34 2023: liian kova alku, romahdus.
+    KK34 2025: parempi, mutta vielä yläkanttiin. Nyt Kuusamo 2026: sykekuri piti, stamina kesti, keho ei romahtanut.
+    Suunta on selkeästi oikea. <strong>KK55:ssä sama filosofia + vielä konservatiivisempi = onnistunut kisa.</strong>
+  </div>
+</div>
+
+<!-- Energiatalous -->
+<div class="card">
+  <h2>Energiatalous &amp; ravitsemus</h2>
+  <div class="grid grid-3">
+    <div class="metric">
+      <div class="label">Kalorit (netto)</div>
+      <div class="value">1 961 <span style="font-size:0.9rem">kcal</span></div>
+      <div class="detail">74 kcal/km &mdash; polkumaastossa</div>
+    </div>
+    <div class="metric">
+      <div class="label">Ravitsemus</div>
+      <div class="value" style="color:var(--green)">8 <span style="font-size:0.9rem">geeliä</span></div>
+      <div class="detail">+ 2 pulloa urheilujuomaa</div>
+    </div>
+    <div class="metric">
+      <div class="label">KK55-arvio</div>
+      <div class="value" style="color:var(--orange)">~4 100 <span style="font-size:0.9rem">kcal</span></div>
+      <div class="detail">55 km &times; ~74 kcal/km</div>
+    </div>
+  </div>
+
+  <div class="insight blue">
+    <strong>&#9998; KK55-energiabudjetti (päivitetty):</strong> Polkumaastossa kulutus ~74 kcal/km. 55 km = ~4 100 kcal.
+    Glykogeeni (~2 000 kcal) + rasvanpoltto (~1 500 kcal matalalla intensiteetillä) = 3 500 kcal kehovarastoista.
+    Tankattava energia: ~600&ndash;800 kcal &rarr; noin <strong>15&ndash;20 geeliä + juomaa</strong> 10 h:n kisassa.
+    Karin 8 geeliä / 4 h on hyvä alku &mdash; skaalautuu hyvin KK55:een.
+  </div>
+</div>
+
+<!-- Johtopäätökset -->
+<div class="card">
+  <h2>Johtopäätökset — KK55 Karhunkierros 55 km</h2>
+
+  <div class="insight green">
+    <strong>&#10004; Kevään tärkein ja paras harjoitus.</strong><br>
+    Tämä 26,5 km:n polkujuoksu Kuusamossa oli ensimmäinen todellinen KK55-strategian testi oikeassa maastossa.
+    Kaikki avainkriteerit täyttyivät: sykekuri piti (ka. 122, max 144), kävely/hölkkä-vuorottelu toimi luontevasti,
+    stamina oli yli 50 % puolivälissä, ja negatiivinen splitti todisti energiareservin. Tuntemus lenkin jälkeen &mdash;
+    ja 5 km:n kävely iltapäivällä &mdash; vahvistaa, että strategia toimii.
+  </div>
+
+  <div class="insight green">
+    <strong>&#10004; Kestävyysstrategian todisteet kertyvät.</strong><br>
+    Viiden harjoituksen sarja (tiedonkeruu 26.3. &rarr; kenttätesti 28.3. &rarr; tempo 30.3. &rarr; pitkä 4.4.) on rakentanut
+    selkeän kokonaiskuvan:
+    <table style="margin:8px 0;font-size:0.85rem;width:auto">
+      <tr><td style="padding:4px 12px;border:none;text-align:left">Kävely:</td><td style="padding:4px 12px;border:none;color:var(--blue)">~126 W / HR ~110 / 0,25 %/min</td></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left">Kestävä hölkkä:</td><td style="padding:4px 12px;border:none;color:var(--green)">~220&ndash;236 W / HR 120&ndash;125 / 0,39&ndash;0,47 %/min</td></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left">Tempo:</td><td style="padding:4px 12px;border:none;color:var(--orange)">~296 W / HR 130&ndash;137 / 0,90 %/min</td></tr>
+      <tr><td style="padding:4px 12px;border:none;text-align:left"><strong>KK55-kisataso:</strong></td><td style="padding:4px 12px;border:none;color:var(--green)"><strong>~175 W / HR &lt; 130 / ~0,18 %/min tavoite</strong></td></tr>
+    </table>
+  </div>
+
+  <div class="insight">
+    <strong>Kehityskohdat KK55:een (47 pv):</strong><br>
+    &bull; Keskiteho (199 W) oli vielä yläkantissa &mdash; kisassa tavoite ~175 W<br>
+    &bull; Tempo-osuus (14,6 %) kannattaa minimoida kisassa (&lt; 10 %)<br>
+    &bull; Pidempi harjoituslenkki (30+ km) antaisi paremman kuvan todellisesta kestävyydestä<br>
+    &bull; Ravitsemusstrategian hienosäätö: tankkaamisen aloitus jo ensimmäisestä tunnista
+  </div>
+</div>
+
+<script>
+const WALK = '#4472C4', JOG = '#70AD47', TEMPO = '#ED7D31', DEAD = '#9ca3af';
+const RED = '#FF6B6B', GREEN = '#70AD47', YELLOW = '#FFC000', BLUE = '#4472C4', PURPLE = '#9B59B6';
+
+Chart.defaults.color = '#9ca3af';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+
+// 1. HR Zone donut
+new Chart(document.getElementById('hrZoneChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Z1 (<110)', 'Z2 (110–128)', 'Z3 (128–146)', 'Z4 (146–165)', 'Z5 (>165)'],
+    datasets: [{
+      data: [7.9, 62.4, 29.7, 0, 0],
+      backgroundColor: ['#9ca3af', GREEN, TEMPO, RED, PURPLE],
+      borderColor: '#1a1d27', borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#e4e4e7', padding: 12, font: { size: 11 } } },
+      title: { display: true, text: 'Sykejakauma (%)', color: '#e4e4e7', font: { size: 13 } }
+    }
+  }
+});
+
+// 2. Power zone donut
+new Chart(document.getElementById('powerZoneChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Pysähdykset (0 W)', 'Kävely (<160)', '"Kuollut" (160–210)', 'Hölkkä (210–260)', 'Tempo (>260)'],
+    datasets: [{
+      data: [7.0, 16.7, 20.1, 41.5, 14.6],
+      backgroundColor: ['#555', WALK, DEAD, JOG, TEMPO],
+      borderColor: '#1a1d27', borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#e4e4e7', padding: 12, font: { size: 11 } } },
+      title: { display: true, text: 'Tehojakauma (%)', color: '#e4e4e7', font: { size: 13 } }
+    }
+  }
+});
+
+// 3. Stamina chart
+new Chart(document.getElementById('staminaChart'), {
+  type: 'line',
+  data: {
+    labels: ['0 km', '1,3', '2,7', '4,3', '5,6', '7,1', '8,4', '9,5', '10,5', '11,3', '12,2', '13,4', '14,7', '16,2', '17,5', '18,9', '20,3', '21,8', '23,3', '24,8', '26,3'],
+    datasets: [{
+      label: 'Stamina (%)',
+      data: [100, 95, 89, 83, 78, 73, 69, 65, 61, 58, 57, 54, 49, 44, 38, 33, 28, 23, 18, 14, 8],
+      borderColor: YELLOW, backgroundColor: 'rgba(255,192,0,0.1)',
+      fill: true, tension: 0.3, pointRadius: 3, borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { min: 0, max: 100, title: { display: true, text: 'Stamina (%)' },
+        grid: { color: 'rgba(255,255,255,0.05)' } },
+      x: { title: { display: true, text: 'Matka (km)' },
+        grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          half: {
+            type: 'line', xMin: 11, xMax: 11,
+            borderColor: 'rgba(68,114,196,0.5)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'Puoliväli: 54%', position: 'start', color: BLUE, font: {size: 10} }
+          },
+          target: {
+            type: 'line', yMin: 50, yMax: 50,
+            borderColor: 'rgba(112,173,71,0.4)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'Tavoite >50% puolivälissä', position: 'end', color: GREEN, font: {size: 10} }
+          },
+          danger: {
+            type: 'line', yMin: 40, yMax: 40,
+            borderColor: 'rgba(255,107,107,0.4)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'Romahdusraja 40%', position: 'end', color: RED, font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 4. Lap chart (HR + power + pace)
+const lapLabels = Array.from({length: 26}, (_, i) => `${i+1}`);
+const lapHR =    [115,126,123,123,127,123,119,122,124,121,126,107,122,124,120,126,126,127,127,122,122,126,123,122,126,125];
+const lapPower = [201,224,225,232,219,215,218,208,172,167,186,89,147,185,200,237,206,235,219,207,207,221,203,217,237,225];
+const lapPace =  [508,516,463,456,575,510,460,525,678,703,662,915,648,598,485,457,608,467,506,511,455,452,533,477,464,486];
+const lapBg = lapLabels.map((_, i) => i < 9 ? 'rgba(112,173,71,0.5)' : i < 14 ? 'rgba(255,192,0,0.5)' : 'rgba(68,114,196,0.5)');
+
+new Chart(document.getElementById('lapChart'), {
+  type: 'bar',
+  data: {
+    labels: lapLabels,
+    datasets: [
+      {
+        label: 'Teho (W)',
+        data: lapPower,
+        backgroundColor: lapBg,
+        borderColor: lapBg.map(c => c.replace('0.5', '1')),
+        borderWidth: 1, yAxisID: 'y'
+      },
+      {
+        label: 'Syke (bpm)',
+        data: lapHR,
+        type: 'line', borderColor: RED, tension: 0.3, pointRadius: 3,
+        yAxisID: 'y2', borderWidth: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { position: 'left', min: 0, max: 300, title: { display: true, text: 'Teho (W)' },
+        grid: { color: 'rgba(255,255,255,0.05)' } },
+      y2: { position: 'right', min: 90, max: 160, title: { display: true, text: 'Syke (bpm)' },
+        grid: { display: false } },
+      x: { title: { display: true, text: 'Kilometri' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          hr130: {
+            type: 'line', yMin: 130, yMax: 130, yScaleID: 'y2',
+            borderColor: 'rgba(255,107,107,0.5)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'HR 130 katto', position: 'start', color: RED, font: {size: 10} }
+          },
+          kk55power: {
+            type: 'line', yMin: 175, yMax: 175, yScaleID: 'y',
+            borderColor: 'rgba(68,114,196,0.4)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'KK55 tavoite 175W', position: 'end', color: BLUE, font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 5. Profile chart (5 parts)
+new Chart(document.getElementById('profileChart'), {
+  type: 'bar',
+  data: {
+    labels: ['0–20%', '20–40%', '40–60%', '60–80%', '80–100%'],
+    datasets: [
+      {
+        label: 'Ka. teho (W)',
+        data: [227, 211, 183, 221, 221],
+        backgroundColor: ['rgba(112,173,71,0.5)', 'rgba(112,173,71,0.5)', 'rgba(255,192,0,0.5)', 'rgba(68,114,196,0.5)', 'rgba(68,114,196,0.5)'],
+        borderWidth: 1, yAxisID: 'y'
+      },
+      {
+        label: 'Ka. syke (bpm)',
+        data: [122, 122, 118, 125, 124],
+        type: 'line', borderColor: RED, tension: 0.3, pointRadius: 6,
+        yAxisID: 'y2', borderWidth: 2
+      },
+      {
+        label: 'Ka. tahti (s/km)',
+        data: [493, 540, 594, 505, 474],
+        type: 'line', borderColor: GREEN, tension: 0.3, pointRadius: 6,
+        yAxisID: 'y3', borderWidth: 2, borderDash: [5,3]
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { position: 'left', min: 100, max: 280, title: { display: true, text: 'Teho (W)' },
+        grid: { color: 'rgba(255,255,255,0.05)' } },
+      y2: { position: 'right', min: 110, max: 140, title: { display: true, text: 'Syke (bpm)' },
+        grid: { display: false } },
+      y3: { display: false, min: 400, max: 700 },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      annotation: {
+        annotations: {
+          kk55power: {
+            type: 'line', yMin: 175, yMax: 175, yScaleID: 'y',
+            borderColor: 'rgba(68,114,196,0.4)', borderWidth: 2, borderDash: [6,3],
+            label: { display: true, content: 'KK55 tavoiteteho 175W', position: 'end', color: BLUE, font: {size: 10} }
+          }
+        }
+      },
+      legend: { labels: { color: '#e4e4e7' } }
+    }
+  }
+});
+
+// 6. Comparison bar chart
+new Chart(document.getElementById('compareChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Ka. syke (bpm)', 'Max HR (bpm)', 'Z3+Z4 (%)', 'Stamina puoliv. (%)'],
+    datasets: [
+      {
+        label: 'Kuusamo 4.4.2026',
+        data: [122, 144, 29.7, 54],
+        backgroundColor: 'rgba(112,173,71,0.6)',
+        borderColor: GREEN, borderWidth: 1
+      },
+      {
+        label: 'KK34 2025',
+        data: [128, 152, 45, 26],
+        backgroundColor: 'rgba(237,125,49,0.6)',
+        borderColor: TEMPO, borderWidth: 1
+      },
+      {
+        label: 'KK34 2023',
+        data: [141, 175, 81, null],
+        backgroundColor: 'rgba(255,107,107,0.6)',
+        borderColor: RED, borderWidth: 1
+      },
+      {
+        label: 'KK55 tavoite',
+        data: [125, 140, 20, 50],
+        backgroundColor: 'rgba(68,114,196,0.4)',
+        borderColor: BLUE, borderWidth: 2, borderDash: [5,3]
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      y: { min: 0, max: 180, grid: { color: 'rgba(255,255,255,0.05)' } },
+      x: { grid: { color: 'rgba(255,255,255,0.05)' } }
+    },
+    plugins: {
+      legend: { position: 'bottom', labels: { color: '#e4e4e7', padding: 12 } }
+    }
+  }
+});
+</script>
+
+</body>
+</html>
